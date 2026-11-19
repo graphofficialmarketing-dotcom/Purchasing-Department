@@ -104,8 +104,8 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center}
 .formgrid .btn{padding:0 16px}
 .formgrid label.check{display:flex;align-items:center;gap:6px;font-size:13px;height:36px}
 .f-pw{flex:0 0 240px}
-.f-cat{flex:0 0 170px} .f-code{flex:0 0 110px} .f-item{flex:1 1 200px} .f-unit{flex:0 0 100px}
-.f-qty{flex:0 0 90px} .f-sup{flex:0 0 150px} .f-type{flex:0 0 170px}
+.f-cat{flex:0 0 160px} .f-kind{flex:0 0 150px} .f-code{flex:0 0 100px} .f-item{flex:1 1 200px} .f-unit{flex:0 0 90px}
+.f-qty{flex:0 0 80px} .f-sup{flex:0 0 140px} .f-type{flex:0 0 160px}
 .formmsg{margin:8px 0 0;font-size:13px;color:var(--muted);min-height:1.4em}
 .formmsg.ok{color:var(--ok)} .formmsg.warn{color:var(--out)}
 .panel p.hint{margin:0 0 10px;color:var(--muted);font-size:13px}
@@ -132,6 +132,11 @@ th.act,td.act{width:76px;text-align:right}
 tr.band td{background:var(--cb);border-left:6px solid var(--c);padding:12px 14px}
 tr.band h3{font-size:16px;color:var(--c);display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
 tr.band h3 small{font-family:var(--body);font-weight:400;font-size:13px;color:var(--muted)}
+tr.kindrow td{background:var(--card);border-left:6px solid var(--cb);padding:9px 14px 6px 22px;border-bottom:1px dashed var(--line)}
+tr.kindrow .kname{font-weight:600;color:var(--ink)}
+tr.kindrow .kname::before{content:"";display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--c);margin-right:8px;vertical-align:middle}
+tr.kindrow small{color:var(--muted);font-size:12px;margin-left:10px}
+th.kind,td.kind{width:150px}
 tr.item td:first-child{border-left:6px solid var(--cb)}
 tr.item:hover td{background:color-mix(in srgb,var(--cb) 45%,transparent)}
 .pill{display:inline-block;font-size:12px;border-radius:999px;padding:1px 10px;font-weight:500;white-space:nowrap}
@@ -143,7 +148,8 @@ tr.item:hover td{background:color-mix(in srgb,var(--cb) 45%,transparent)}
 footer{color:var(--muted);font-size:13px}
 
 /* edit mode: every cell becomes a field */
-body.editing table{min-width:1150px}
+body.editing table{min-width:1300px}
+body.editing tr.kindrow td{padding:8px 12px 6px 18px}
 body.editing th,body.editing td{padding:6px 8px}
 body.editing td{vertical-align:middle}
 body.editing td.code{width:120px}
@@ -223,7 +229,7 @@ tr.item.deleted td:not(.act){opacity:.45}
       </div>
     </div>
     <div class="chips" id="chips" role="group" aria-label="หมวดสินค้า"></div>
-    <p class="editnote" id="editnote" hidden>แก้ได้ทุกช่องในตาราง · เพิ่มของใหม่ที่ช่อง “เพิ่มรายการใหม่” ด้านบนตาราง · กด “ลบ” ท้ายแถวเพื่อเอาออก (กด “เลิกลบ” ได้ก่อนบันทึก) · กด Enter เพื่อลงไปแถวถัดไป · เสร็จแล้วกด “บันทึก” ข้อมูลจะถูกบันทึกลง Google Sheets</p>
+    <p class="editnote" id="editnote" hidden>แก้ได้ทุกช่องในตาราง รวมถึงชนิดสินค้า (เช่น โกโก้ ไซรัป) · เพิ่มของใหม่ที่ช่อง “เพิ่มรายการใหม่” ด้านบนตาราง · กด “ลบ” ท้ายแถวเพื่อเอาออก (กด “เลิกลบ” ได้ก่อนบันทึก) · กด Enter เพื่อลงไปแถวถัดไป · เสร็จแล้วกด “บันทึก” ข้อมูลจะถูกบันทึกลง Google Sheets</p>
   </section>
 
   <section class="panel" id="loginPanel" aria-label="เข้าสู่ระบบเพื่อแก้ไข" hidden>
@@ -245,6 +251,7 @@ tr.item.deleted td:not(.act){opacity:.45}
       <h2>เพิ่มรายการใหม่</h2>
       <div class="formgrid">
         <label class="f-cat"><span>หมวด *</span><select id="a-cat" class="cell"></select></label>
+        <label class="f-kind"><span>ชนิดสินค้า</span><input id="a-kind" class="cell" placeholder="เช่น โกโก้" list="dl-kind" autocomplete="off"></label>
         <label class="f-code"><span>รหัสเลขที่</span><input id="a-code" class="cell" placeholder="รหัส" autocomplete="off"></label>
         <label class="f-item"><span>รายละเอียดสินค้า *</span><input id="a-item" class="cell" placeholder="ชื่อ ยี่ห้อ ขนาด" autocomplete="off"></label>
         <label class="f-unit"><span>หน่วยนับ</span><input id="a-unit" class="cell" placeholder="หน่วย" list="dl-unit" autocomplete="off"></label>
@@ -260,14 +267,14 @@ tr.item.deleted td:not(.act){opacity:.45}
   <div class="tablebox">
     <table>
       <thead><tr>
-        <th>No.</th><th>รหัสเลขที่<small>Code</small></th><th>รายละเอียดสินค้า<small>Item description</small></th>
+        <th>No.</th><th class="kind" id="thKind" hidden>ชนิดสินค้า<small>Kind</small></th><th>รหัสเลขที่<small>Code</small></th><th>รายละเอียดสินค้า<small>Item description</small></th>
         <th>หน่วยนับ<small>Unit</small></th><th>จำนวนทั้งหมด<small>คงเหลือ</small></th><th>ผู้ส่งสินค้า<small>Supplier</small></th>
         <th>ประเภทสินค้า<small>Type</small></th><th class="act" id="thAct" hidden><span class="sr-only">ลบรายการ</span></th>
       </tr></thead>
       <tbody id="rows"><tr><td colspan="7" class="empty">กำลังโหลดรายการ…</td></tr></tbody>
     </table>
   </div>
-  <datalist id="dl-unit"></datalist><datalist id="dl-sup"></datalist>
+  <datalist id="dl-unit"></datalist><datalist id="dl-sup"></datalist><datalist id="dl-kind"></datalist>
 
   <footer id="source">ยอดคงเหลือเป็นข้อมูล ณ วันที่นับสต็อก</footer>
 </main>
@@ -299,9 +306,9 @@ const API_URL=String(window.SHEET_API_URL||"").trim();
 const EDIT_URL=String(window.SHEET_EDIT_URL||"https://docs.google.com/spreadsheets/d/1fcB6b6RUewa_EGMoUudJuBJ2jZ1Zr4Bz_ng063DlZu0/edit").trim();
 const FALLBACK_FILE="data/items.json";
 const PW_KEY="quarter-web-pw", DRAFT_KEY="quarter-web-draft-v1";
-const FIELDS=["code","item","unit","qty","sup","type"];
-const ROWKEYS=["cat","code","item","unit","qty","sup","type"];
-const LABEL={code:"รหัสเลขที่",item:"รายละเอียดสินค้า",unit:"หน่วยนับ",qty:"จำนวนทั้งหมด",sup:"ผู้ส่งสินค้า",type:"ประเภทสินค้า"};
+const FIELDS=["kind","code","item","unit","qty","sup","type"];
+const ROWKEYS=["cat","kind","code","item","unit","qty","sup","type"];
+const LABEL={kind:"ชนิดสินค้า",code:"รหัสเลขที่",item:"รายละเอียดสินค้า",unit:"หน่วยนับ",qty:"จำนวนทั้งหมด",sup:"ผู้ส่งสินค้า",type:"ประเภทสินค้า"};
 const REFRESH_MS=5*60*1000;
 
 let items=null, version=null, source="", transport="direct";  /* items: the sheet's rows, in sheet order */
@@ -347,7 +354,7 @@ function parseCSV(text){
   if(field!==""||row.length){row.push(field); rows.push(row);}
   return rows;
 }
-const HEADS=[["type","ประเภท"],["cat","หมวด"],["code","รหัส"],["item","รายละเอียด"],["unit","หน่วย"],["qty","จำนวน"],["qty","คงเหลือ"],["sup","ผู้ส่ง"],["sup","supplier"]];
+const HEADS=[["type","ประเภท"],["kind","ชนิด"],["cat","หมวด"],["code","รหัส"],["item","รายละเอียด"],["unit","หน่วย"],["qty","จำนวน"],["qty","คงเหลือ"],["sup","ผู้ส่ง"],["sup","supplier"]];
 function mapHeader(row){
   const m={};
   row.forEach((h,i)=>{ const t=str(h).trim().toLowerCase(); if(!t) return;
@@ -364,7 +371,7 @@ function rowsFromCSV(text){
 function rowsFromJSON(list){
   return (Array.isArray(list)?list:[]).filter(o=>o&&o.item).map(o=>{
     const k=KNOWN.find(c=>c.key===o.cat);
-    return {cat:k?k.name:str(o.cat),code:str(o.code),item:str(o.item),unit:str(o.unit),qty:str(o.qty),sup:str(o.sup),type:str(o.type)};
+    return {cat:k?k.name:str(o.cat),kind:str(o.kind),code:str(o.code),item:str(o.item),unit:str(o.unit),qty:str(o.qty),sup:str(o.sup),type:str(o.type)};
   });
 }
 function setItems(rows,ver,src){
@@ -453,7 +460,12 @@ function rowsNow(){
   if(!editing) list=list.filter(it=>it.item);
   assignCats(list);
   const out=[]; let n=0;
-  for(const c of cats) for(const it of list) if(it.ck===c.key) out.push(it);
+  for(const c of cats){
+    const inCat=list.filter(it=>it.ck===c.key), kinds=[];
+    for(const it of inCat){ const k=str(it.kind).trim(); if(!kinds.includes(k)) kinds.push(k); }
+    kinds.sort((a,b)=>(a==="")-(b===""));
+    for(const k of kinds) for(const it of inCat) if(str(it.kind).trim()===k) out.push(it);
+  }
   for(const it of out){ it._no=it._del?null:++n; const p=num(it.qty); it._qv=p.v; it._st=statusOf(p.v); }
   return out;
 }
@@ -489,6 +501,7 @@ function editRow(it,c){
   const cls=["item",c.cls]; if(it._new) cls.push("new"); if(it._del) cls.push("deleted");
   const name=esc(it.item||"รายการใหม่");
   return `<tr class="${cls.join(" ")}" data-id="${esc(it.id)}"><td class="no">${it._no===null?"–":it._no}</td>`+
+    `<td class="kind">${field(it,"kind","ชนิด",' list="dl-kind"')}</td>`+
     `<td class="code">${field(it,"code","รหัส")}</td>`+
     `<td class="desc">${field(it,"item","ชื่อ ยี่ห้อ ขนาด")}</td>`+
     `<td class="unit">${field(it,"unit","หน่วย",' list="dl-unit"')}</td>`+
@@ -502,20 +515,21 @@ function fillLists(list){
     const vals=[...new Set(list.map(it=>str(it[f]).trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"th"));
     document.getElementById(id).innerHTML=vals.map(v=>`<option value="${esc(v)}"></option>`).join("");
   };
-  fill("dl-unit","unit"); fill("dl-sup","sup");
+  fill("dl-unit","unit"); fill("dl-sup","sup"); fill("dl-kind","kind");
 }
 function render(){
   document.body.classList.toggle("editing",editing);
   $("#thAct").hidden=!editing;
+  $("#thKind").hidden=!editing;
   if(!items) return;
-  const cols=editing?8:7;
+  const cols=editing?9:7;
   const all=rowsNow(), live=all.filter(it=>!it._del);
   $("#tiles").innerHTML=TILES.map(t=>`<button type="button" class="tile ${t.cls}" data-st="${t.k}" aria-pressed="${st===t.k}"><b>${t.k==="all"?live.length:live.filter(it=>it._st===t.k).length}</b><span>${t.label}</span></button>`).join("");
   $("#chips").innerHTML=`<button type="button" class="chip s-all" data-cat="all" aria-pressed="${cat==="all"}"><i></i>ทุกหมวด <em>${live.length}</em></button>`+
     cats.map(c=>`<button type="button" class="chip ${c.cls}" data-cat="${esc(c.key)}" aria-pressed="${cat===c.key}"><i></i>${esc(c.name)} <em>${live.filter(it=>it.ck===c.key).length}</em></button>`).join("");
   const q=$("#q").value.trim().toLowerCase();
   const bad=new Set([...invalid].map(k=>k.split(":")[0]));
-  const hit=it=>(st==="all"||it._st===st)&&(!q||[it.code,it.item,it.unit,it.sup,it.type].map(str).join(" ").toLowerCase().includes(q));
+  const hit=it=>(st==="all"||it._st===st)&&(!q||[it.kind,it.code,it.item,it.unit,it.sup,it.type].map(str).join(" ").toLowerCase().includes(q));
   const vis=all.filter(it=>(cat==="all"||it.ck===cat)&&(hit(it)||(editing&&(it._new||bad.has(it.id)))));
   let html="";
   for(const c of cats){
@@ -523,7 +537,18 @@ function render(){
     const shown=list.filter(it=>!it._del);
     const need=shown.filter(it=>it._st==="out"||it._st==="low").length;
     html+=`<tr class="band ${c.cls}"><td colspan="${cols}"><h3>${esc(c.name)} <small>${shown.length} รายการ · ${esc(c.hint)}${need?` · ต้องดู ${need} รายการ`:""}</small></h3></td></tr>`;
-    html+=list.map(it=>editing?editRow(it,c):readRow(it,c)).join("");
+    const grouped=list.some(it=>str(it.kind).trim());
+    let lastKind=null;
+    for(const it of list){
+      const k=str(it.kind).trim();
+      if(grouped&&k!==lastKind){
+        const g=list.filter(x=>str(x.kind).trim()===k&&!x._del);
+        const gneed=g.filter(x=>x._st==="out"||x._st==="low").length;
+        html+=`<tr class="kindrow ${c.cls}"><td colspan="${cols}"><span class="kname">${esc(k||"ยังไม่ระบุชนิด")}</span><small>${g.length} รายการ${gneed?` · ต้องดู ${gneed}`:""}</small></td></tr>`;
+        lastKind=k;
+      }
+      html+=editing?editRow(it,c):readRow(it,c);
+    }
   }
   $("#rows").innerHTML=html||`<tr><td colspan="${cols}" class="empty">ไม่พบรายการที่ตรงกับการค้นหา ลองพิมพ์คำอื่น หรือกด “ทุกหมวด”</td></tr>`;
   $("#count").textContent=`แสดง ${vis.filter(it=>!it._del).length} จาก ${live.length} รายการ`;
@@ -628,7 +653,7 @@ function fillCatSelect(){
 $("#a-type").innerHTML='<option value="">เลือกประเภท</option>'+TYPES.map(o=>`<option value="${esc(o.v)}">${esc(o.v)}</option>`).join("");
 function addMsg(text,kind){ const el=$("#addMsg"); el.textContent=text||""; el.className="formmsg"+(kind?" "+kind:""); }
 function resetAddForm(){
-  ["a-code","a-item","a-unit","a-qty","a-sup"].forEach(k=>{ $("#"+k).value=""; });
+  ["a-kind","a-code","a-item","a-unit","a-qty","a-sup"].forEach(k=>{ $("#"+k).value=""; });
   $("#a-type").value=""; fillCatSelect(); $("#a-cat").value="";
   document.querySelectorAll("#addForm .invalid").forEach(el=>el.classList.remove("invalid"));
   addMsg("");
@@ -645,11 +670,12 @@ $("#addForm").addEventListener("submit",e=>{
   if(!num(qty).ok){ errs.push("จำนวนต้องเป็นตัวเลข"); $("#a-qty").classList.add("invalid"); }
   if(errs.length){ addMsg("ยังเพิ่มไม่ได้: "+errs.join(" · "),"warn"); const f=document.querySelector("#addForm .invalid"); if(f) f.focus(); return; }
   const id="n"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-  draft.a.push({id,cat:c,code:v("a-code").trim(),item,unit:v("a-unit").trim(),qty,sup:v("a-sup").trim(),type:v("a-type")});
+  draft.a.push({id,cat:c,kind:v("a-kind").trim(),code:v("a-code").trim(),item,unit:v("a-unit").trim(),qty,sup:v("a-sup").trim(),type:v("a-type")});
   store.set(DRAFT_KEY,draft);
   ["a-code","a-item","a-unit","a-qty","a-sup"].forEach(k=>{ $("#"+k).value=""; }); $("#a-type").value="";
   render(); updateTools();
-  addMsg(`เพิ่ม “${item}” ในหมวด ${c} แล้ว · อย่าลืมกดบันทึก`,"ok");
+  const kd=v("a-kind").trim();
+  addMsg(`เพิ่ม “${item}” ในหมวด ${c}${kd?` ชนิด ${kd}`:""} แล้ว · อย่าลืมกดบันทึก`,"ok");
   $("#a-code").focus();
 });
 
