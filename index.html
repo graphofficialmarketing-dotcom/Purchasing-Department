@@ -7,11 +7,11 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bai+Jamjuree:wght@500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600&display=swap" rel="stylesheet">
-<!-- ลิงก์ Google Sheets อยู่ในไฟล์ config.js -->
+<!-- ลิงก์ Google Sheets และ Apps Script อยู่ในไฟล์ config.js -->
 <script src="config.js"></script>
 <style>
-/* Layout: black masthead (title + brand logos) → stock status key → summary tiles → filter bar → stock table grouped by category.
-   Data comes from the published Google Sheet (config.js); data/items.json is the fallback. */
+/* Layout: black masthead (title + brand logos) → stock status key → summary tiles → filter/edit bar → stock table grouped by category.
+   Data: Apps Script web app (live, can save) → published CSV → data/items.json. */
 :root{
   --ink:#16171a; --paper:#f6f6f4; --card:#ffffff; --line:#e3e3df; --muted:#6b6d72; --focus:#1d4ed8;
   --raw:#c2410c; --raw-bg:#fff1e8;
@@ -47,6 +47,7 @@ body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:
 .wrap{max-width:1280px;margin:0 auto;padding:0 20px}
 h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.25}
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+[hidden]{display:none!important}
 
 /* masthead stays black in both themes */
 .mast{background:#0b0b0c;color:#f4f4f2;padding:22px 0}
@@ -59,12 +60,12 @@ main.wrap{padding:26px 20px 60px;display:grid;gap:22px}
 
 /* stock status key */
 .panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 20px}
+.panel h2{font-size:16px;margin-bottom:8px}
 .status{display:flex;align-items:center;gap:10px 28px;flex-wrap:wrap}
-.status h2{font-size:18px}
+.status h2{font-size:18px;margin:0}
 .legend{display:flex;flex-wrap:wrap;gap:8px 24px}
 .legend div{display:flex;gap:10px;align-items:center;color:var(--muted)}
 .notice{margin:0;padding:10px 14px;border-radius:10px;background:var(--low-bg);color:var(--ink);border:1px solid color-mix(in srgb,var(--low) 30%,transparent);font-size:14px}
-.notice[hidden]{display:none}
 
 /* tiles */
 .tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
@@ -73,26 +74,41 @@ main.wrap{padding:26px 20px 60px;display:grid;gap:22px}
 .tile b{display:block;font-family:var(--display);font-size:30px;line-height:1.1;font-variant-numeric:tabular-nums}
 .tile span{color:var(--muted);font-size:13px}
 .tile[aria-pressed="true"]{background:var(--cb,var(--card));box-shadow:0 0 0 2px var(--c) inset}
-.tile:focus-visible,.chip:focus-visible,.btn:focus-visible,#q:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.tile:focus-visible,.chip:focus-visible,.btn:focus-visible,#q:focus-visible,.cell:focus-visible,.rowbtn:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
 
-/* filter bar */
+/* filter + edit bar */
 .bar{position:sticky;top:0;z-index:5;background:var(--paper);padding:10px 0;display:grid;gap:10px;border-bottom:1px solid var(--line)}
 .search{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-#q{flex:1 1 280px;font:inherit;padding:10px 14px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
+#q{flex:1 1 260px;font:inherit;padding:10px 14px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
 #count{color:var(--muted);font-size:13px;white-space:nowrap}
+.tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-left:auto}
 .btn{font:inherit;font-size:14px;font-weight:500;border-radius:10px;padding:8px 16px;cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--ink)}
 a.btn{text-decoration:none;display:inline-flex;align-items:center}
 .btn.primary{background:var(--ink);color:var(--card);border-color:transparent}
 .btn.ghost{background:transparent}
 .btn:disabled{opacity:.5;cursor:default}
-.btn[hidden]{display:none}
-.tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-left:auto}
+.savestate{font-size:13px;color:var(--muted)}
+.savestate.ok{color:var(--ok)} .savestate.warn{color:var(--low)}
+.editnote{margin:0;font-size:13px;color:var(--ink);background:var(--low-bg);border:1px solid color-mix(in srgb,var(--low) 30%,transparent);border-radius:10px;padding:8px 12px}
 .chips{display:flex;gap:8px;flex-wrap:wrap}
 .chip{font:inherit;font-size:13px;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:5px 14px;cursor:pointer;display:inline-flex;gap:8px;align-items:center}
 .chip i{width:10px;height:10px;border-radius:50%;background:var(--c,var(--ink));display:inline-block}
 .chip[aria-pressed="true"]{background:var(--c,var(--ink));color:var(--card);border-color:transparent}
 .chip[aria-pressed="true"] i{background:var(--card)}
 .chip em{font-style:normal;opacity:.7;font-variant-numeric:tabular-nums}
+
+/* sign-in and add-item forms */
+.formgrid{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
+.formgrid label{display:grid;gap:4px;font-size:12px;color:var(--muted)}
+.formgrid .cell,.formgrid .btn{height:36px}
+.formgrid .btn{padding:0 16px}
+.formgrid label.check{display:flex;align-items:center;gap:6px;font-size:13px;height:36px}
+.f-pw{flex:0 0 240px}
+.f-cat{flex:0 0 170px} .f-code{flex:0 0 110px} .f-item{flex:1 1 200px} .f-unit{flex:0 0 100px}
+.f-qty{flex:0 0 90px} .f-sup{flex:0 0 150px} .f-type{flex:0 0 170px}
+.formmsg{margin:8px 0 0;font-size:13px;color:var(--muted);min-height:1.4em}
+.formmsg.ok{color:var(--ok)} .formmsg.warn{color:var(--out)}
+.panel p.hint{margin:0 0 10px;color:var(--muted);font-size:13px}
 
 /* table */
 .tablebox{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:14px}
@@ -106,8 +122,10 @@ td.desc{min-width:240px}
 td.unit{white-space:nowrap}
 td.qty{white-space:nowrap;font-variant-numeric:tabular-nums}
 td.qty b{font-size:16px;margin-right:8px}
+td.qty .raw{color:var(--muted);margin-right:8px}
 td.sup{color:var(--muted)}
 td.type{width:200px}
+th.act,td.act{width:76px;text-align:right}
 .todo{display:inline-block;border:1px dashed var(--line);border-radius:6px;padding:0 8px;color:var(--muted);font-size:12px;white-space:nowrap}
 .codeval{font-weight:600;font-variant-numeric:tabular-nums}
 .dash{color:var(--muted)}
@@ -124,6 +142,28 @@ tr.item:hover td{background:color-mix(in srgb,var(--cb) 45%,transparent)}
 .empty{padding:40px;text-align:center;color:var(--muted)}
 footer{color:var(--muted);font-size:13px}
 
+/* edit mode: every cell becomes a field */
+body.editing table{min-width:1150px}
+body.editing th,body.editing td{padding:6px 8px}
+body.editing td{vertical-align:middle}
+body.editing td.code{width:120px}
+body.editing td.unit{width:110px}
+body.editing td.qty{width:100px}
+body.editing td.sup{width:160px}
+body.editing td.type{width:190px}
+body.editing tr.band td{padding:10px 12px}
+.cell{font:inherit;font-size:14px;width:100%;padding:5px 8px;border:1px solid var(--line);border-radius:8px;background:var(--paper);color:var(--ink)}
+input.cell::placeholder{color:var(--muted);opacity:.7}
+select.cell{cursor:pointer}
+.cell.num{text-align:right}
+.cell.dirty{border-color:var(--low);background:var(--low-bg)}
+.cell.invalid{border-color:var(--out);background:var(--out-bg)}
+.cell:disabled{text-decoration:line-through;cursor:default}
+tr.item.new td:first-child{border-left-color:var(--ok)}
+tr.item.deleted td:not(.act){opacity:.45}
+.rowbtn{font:inherit;font-size:12px;border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:8px;padding:4px 10px;cursor:pointer;white-space:nowrap}
+.rowbtn.del:hover{color:var(--out);border-color:var(--out)}
+
 .raw{--c:var(--raw);--cb:var(--raw-bg)} .pack{--c:var(--pack);--cb:var(--pack-bg)}
 .cons{--c:var(--cons);--cb:var(--cons-bg)} .clean{--c:var(--clean);--cb:var(--clean-bg)}
 .tool{--c:var(--tool);--cb:var(--tool-bg)} .souv{--c:var(--souv);--cb:var(--souv-bg)}
@@ -132,6 +172,7 @@ footer{color:var(--muted);font-size:13px}
 
 @media (max-width:760px){
   .tiles{grid-template-columns:repeat(2,1fr)}
+  .tools{margin-left:0}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -166,17 +207,54 @@ footer{color:var(--muted);font-size:13px}
 
   <section class="tiles" aria-label="สรุปสต็อก" id="tiles"></section>
 
-  <section class="bar" aria-label="ค้นหาและกรอง">
+  <section class="bar" aria-label="ค้นหา กรอง และแก้ไข">
     <div class="search">
       <label for="q" class="sr-only">ค้นหาสินค้า ผู้ส่ง หรือรหัส</label>
       <input id="q" type="search" placeholder="ค้นหาชื่อสินค้า ผู้ส่ง หรือรหัส เช่น ดอยคำ, MAKRO, แก้ว">
       <span id="count"></span>
       <div class="tools">
+        <span id="saveState" class="savestate" role="status" aria-live="polite"></span>
         <button type="button" id="btnReload" class="btn ghost">โหลดข้อมูลล่าสุด</button>
-        <a id="btnEditSheet" class="btn primary" href="#" target="_blank" rel="noopener" title="สำหรับทีมงานที่ได้รับสิทธิ์แก้ไขชีต" hidden>แก้ไขข้อมูลใน Google Sheets</a>
+        <a id="btnSheet" class="btn ghost" href="#" target="_blank" rel="noopener" hidden>เปิด Google Sheets</a>
+        <button type="button" id="btnLogout" class="btn ghost" hidden>ออกจากระบบ</button>
+        <button type="button" id="btnEdit" class="btn primary" hidden>แก้ไขตาราง</button>
+        <button type="button" id="btnCancel" class="btn ghost" hidden>ยกเลิก</button>
+        <button type="button" id="btnSave" class="btn primary" hidden>บันทึก</button>
       </div>
     </div>
     <div class="chips" id="chips" role="group" aria-label="หมวดสินค้า"></div>
+    <p class="editnote" id="editnote" hidden>แก้ได้ทุกช่องในตาราง · เพิ่มของใหม่ที่ช่อง “เพิ่มรายการใหม่” ด้านบนตาราง · กด “ลบ” ท้ายแถวเพื่อเอาออก (กด “เลิกลบ” ได้ก่อนบันทึก) · กด Enter เพื่อลงไปแถวถัดไป · เสร็จแล้วกด “บันทึก” ข้อมูลจะถูกบันทึกลง Google Sheets</p>
+  </section>
+
+  <section class="panel" id="loginPanel" aria-label="เข้าสู่ระบบเพื่อแก้ไข" hidden>
+    <form id="loginForm" novalidate>
+      <h2>เข้าสู่ระบบเพื่อแก้ไข</h2>
+      <p class="hint">ใส่รหัสผ่านทีมงาน คนที่ไม่มีรหัสผ่านจะดูตารางได้อย่างเดียว</p>
+      <div class="formgrid">
+        <label class="f-pw"><span>รหัสผ่าน</span><input id="pwInput" class="cell" type="password" autocomplete="current-password"></label>
+        <label class="check"><input type="checkbox" id="pwRemember" checked> จำไว้ในเครื่องนี้</label>
+        <button type="submit" class="btn primary" id="btnLogin">เข้าสู่ระบบ</button>
+        <button type="button" class="btn ghost" id="btnLoginCancel">ยกเลิก</button>
+      </div>
+      <p class="formmsg" id="loginMsg" role="status" aria-live="polite"></p>
+    </form>
+  </section>
+
+  <section class="panel" id="addPanel" aria-label="เพิ่มรายการใหม่" hidden>
+    <form id="addForm" novalidate>
+      <h2>เพิ่มรายการใหม่</h2>
+      <div class="formgrid">
+        <label class="f-cat"><span>หมวด *</span><select id="a-cat" class="cell"></select></label>
+        <label class="f-code"><span>รหัสเลขที่</span><input id="a-code" class="cell" placeholder="รหัส" autocomplete="off"></label>
+        <label class="f-item"><span>รายละเอียดสินค้า *</span><input id="a-item" class="cell" placeholder="ชื่อ ยี่ห้อ ขนาด" autocomplete="off"></label>
+        <label class="f-unit"><span>หน่วยนับ</span><input id="a-unit" class="cell" placeholder="หน่วย" list="dl-unit" autocomplete="off"></label>
+        <label class="f-qty"><span>จำนวนทั้งหมด</span><input id="a-qty" class="cell num" placeholder="จำนวน" inputmode="decimal" autocomplete="off"></label>
+        <label class="f-sup"><span>ผู้ส่งสินค้า</span><input id="a-sup" class="cell" placeholder="ผู้ส่ง" list="dl-sup" autocomplete="off"></label>
+        <label class="f-type"><span>ประเภทสินค้า</span><select id="a-type" class="cell"></select></label>
+        <button type="submit" class="btn primary">+ เพิ่มรายการ</button>
+      </div>
+      <p class="formmsg" id="addMsg" role="status" aria-live="polite"></p>
+    </form>
   </section>
 
   <div class="tablebox">
@@ -184,11 +262,12 @@ footer{color:var(--muted);font-size:13px}
       <thead><tr>
         <th>No.</th><th>รหัสเลขที่<small>Code</small></th><th>รายละเอียดสินค้า<small>Item description</small></th>
         <th>หน่วยนับ<small>Unit</small></th><th>จำนวนทั้งหมด<small>คงเหลือ</small></th><th>ผู้ส่งสินค้า<small>Supplier</small></th>
-        <th>ประเภทสินค้า<small>Type</small></th>
+        <th>ประเภทสินค้า<small>Type</small></th><th class="act" id="thAct" hidden><span class="sr-only">ลบรายการ</span></th>
       </tr></thead>
       <tbody id="rows"><tr><td colspan="7" class="empty">กำลังโหลดรายการ…</td></tr></tbody>
     </table>
   </div>
+  <datalist id="dl-unit"></datalist><datalist id="dl-sup"></datalist>
 
   <footer id="source">ยอดคงเหลือเป็นข้อมูล ณ วันที่นับสต็อก</footer>
 </main>
@@ -215,37 +294,52 @@ const TILES=[
   {k:"low",label:"ใกล้หมด · เหลือไม่ถึง 1 หน่วย",cls:"s-low"},
   {k:"none",label:"ยังไม่ได้นับรอบนี้",cls:"s-none"}
 ];
-const SHEET_URL=String(window.SHEET_CSV_URL||"").trim();
-/* the sheet that staff edit (only people it is shared with as Editor can change it) */
+const CSV_URL=String(window.SHEET_CSV_URL||"").trim();
+const API_URL=String(window.SHEET_API_URL||"").trim();
 const EDIT_URL=String(window.SHEET_EDIT_URL||"https://docs.google.com/spreadsheets/d/1fcB6b6RUewa_EGMoUudJuBJ2jZ1Zr4Bz_ng063DlZu0/edit").trim();
 const FALLBACK_FILE="data/items.json";
+const PW_KEY="quarter-web-pw", DRAFT_KEY="quarter-web-draft-v1";
+const FIELDS=["code","item","unit","qty","sup","type"];
+const ROWKEYS=["cat","code","item","unit","qty","sup","type"];
+const LABEL={code:"รหัสเลขที่",item:"รายละเอียดสินค้า",unit:"หน่วยนับ",qty:"จำนวนทั้งหมด",sup:"ผู้ส่งสินค้า",type:"ประเภทสินค้า"};
 const REFRESH_MS=5*60*1000;
 
-let items=null, cats=KNOWN.map(c=>({...c,cls:c.key}));
+let items=null, version=null, source="", transport="direct";  /* items: the sheet's rows, in sheet order */
+let cats=KNOWN.map(c=>({...c,cls:c.key}));
+let draft={e:{},a:[],d:[]};          /* unsaved work: e = edits {id:{o:original,v:{field:value}}}, a = new rows, d = rows to delete */
+let editing=false, saving=false, invalid=new Set();
 let cat="all", st="all";
+let pw=""; try{ pw=localStorage.getItem(PW_KEY)||""; }catch(e){}
 
 const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const str=v=>v===null||v===undefined?"":String(v);
 const fmt=n=>String(Math.round(n*100)/100);
 const statusOf=q=>q===null?"none":q===0?"out":q<1?"low":"ok";
-function parseQty(v){
-  if(typeof v==="number") return isFinite(v)&&v>=0?v:null;
+const store={
+  get(k){try{return JSON.parse(localStorage.getItem(k)||"null")}catch(e){return null}},
+  set(k,v){try{localStorage.setItem(k,typeof v==="string"?v:JSON.stringify(v))}catch(e){}},
+  del(k){try{localStorage.removeItem(k)}catch(e){}}
+};
+/* a quantity cell: blank, a number, or (only when typed in the sheet) other text */
+function num(v){
   const t=str(v).trim().replace(/[,\s]/g,"");
-  if(!t||t==="-"||t==="–") return null;
-  return /^(\d+\.?\d*|\.\d+)$/.test(t)?parseFloat(t):null;
+  if(!t||t==="-"||t==="–") return {ok:true,v:null};
+  return /^(\d+\.?\d*|\.\d+)$/.test(t)?{ok:true,v:parseFloat(t)}:{ok:false,v:null};
 }
+const snap=o=>{const s={}; ROWKEYS.forEach(k=>s[k]=str(o[k])); return s;};
+const sig=o=>ROWKEYS.map(k=>str(o[k]).trim()).join("\u0001");
+const changeCount=()=>Object.keys(draft.e).length+draft.a.length+draft.d.length;
+const isDeleted=id=>draft.d.some(x=>x.id===id);
 
-/* CSV from Google Sheets → rows of cells (handles quotes, commas and line breaks inside cells) */
+/* ---------- reading the sheet ---------- */
 function parseCSV(text){
   text=String(text).replace(/^﻿/,"");
   const rows=[]; let row=[], field="", q=false;
   for(let i=0;i<text.length;i++){
     const ch=text[i];
-    if(q){
-      if(ch==='"'){ if(text[i+1]==='"'){field+='"'; i++;} else q=false; }
-      else field+=ch;
-    }else if(ch==='"') q=true;
+    if(q){ if(ch==='"'){ if(text[i+1]==='"'){field+='"'; i++;} else q=false; } else field+=ch; }
+    else if(ch==='"') q=true;
     else if(ch===",") {row.push(field); field="";}
     else if(ch==="\n"){row.push(field); rows.push(row); row=[]; field="";}
     else if(ch!=="\r") field+=ch;
@@ -253,40 +347,92 @@ function parseCSV(text){
   if(field!==""||row.length){row.push(field); rows.push(row);}
   return rows;
 }
-/* columns are found by their header text, so their order in the sheet does not matter */
 const HEADS=[["type","ประเภท"],["cat","หมวด"],["code","รหัส"],["item","รายละเอียด"],["unit","หน่วย"],["qty","จำนวน"],["qty","คงเหลือ"],["sup","ผู้ส่ง"],["sup","supplier"]];
 function mapHeader(row){
   const m={};
-  row.forEach((h,i)=>{
-    const t=str(h).trim().toLowerCase(); if(!t) return;
-    for(const [k,kw] of HEADS){ if(!(k in m)&&t.includes(kw)){ m[k]=i; break; } }
-  });
+  row.forEach((h,i)=>{ const t=str(h).trim().toLowerCase(); if(!t) return;
+    for(const [k,kw] of HEADS){ if(!(k in m)&&t.includes(kw)){ m[k]=i; break; } } });
   return m;
 }
-function itemsFromCSV(text){
-  const rows=parseCSV(text);
-  let h=-1, m=null;
+function rowsFromCSV(text){
+  const rows=parseCSV(text); let h=-1, m=null;
   for(let i=0;i<Math.min(rows.length,10);i++){ const t=mapHeader(rows[i]); if("item" in t){h=i; m=t; break;} }
   if(h<0) throw new Error("no-header");
-  const get=(r,k)=>k in m?str(r[m[k]]).trim():"";
-  const out=[];
-  for(const r of rows.slice(h+1)){
-    const item=get(r,"item"); if(!item) continue;
-    out.push({cat:get(r,"cat"),code:get(r,"code"),item,unit:get(r,"unit"),qty:parseQty(get(r,"qty")),sup:get(r,"sup"),type:get(r,"type")});
-  }
-  return out;
+  return rows.slice(h+1).map(r=>{ const o={}; ROWKEYS.forEach(k=>o[k]=k in m?str(r[m[k]]).trim():""); return o; })
+    .filter(o=>ROWKEYS.some(k=>o[k]!==""));
 }
-function itemsFromJSON(list){
-  return list.filter(o=>o&&o.item).map(o=>{
+function rowsFromJSON(list){
+  return (Array.isArray(list)?list:[]).filter(o=>o&&o.item).map(o=>{
     const k=KNOWN.find(c=>c.key===o.cat);
-    return {cat:k?k.name:str(o.cat),code:str(o.code),item:str(o.item),unit:str(o.unit),qty:parseQty(o.qty),sup:str(o.sup),type:str(o.type)};
+    return {cat:k?k.name:str(o.cat),code:str(o.code),item:str(o.item),unit:str(o.unit),qty:str(o.qty),sup:str(o.sup),type:str(o.type)};
   });
 }
-/* category names → the six known bands, plus a grey band for any other name typed in the sheet */
+function setItems(rows,ver,src){
+  items=rows.map((o,i)=>{ const it={id:"r"+i}; ROWKEYS.forEach(k=>it[k]=str(o[k]).trim()); return it; });
+  version=ver||null; source=src;
+}
+async function apiGet(){
+  const url=API_URL+(API_URL.includes("?")?"&":"?")+"_="+Date.now();
+  try{ const r=await fetch(url,{cache:"no-store"}); if(r.ok){ const j=await r.json(); transport="direct"; return j; } }catch(e){}
+  const r=await fetch("api/script?url="+encodeURIComponent(API_URL),{cache:"no-store"});
+  if(!r.ok) throw new Error("HTTP "+r.status);
+  const j=await r.json(); transport="proxy"; return j;
+}
+async function apiPost(body){
+  const opts={method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(body)};
+  const r=transport==="proxy"?await fetch("api/script?url="+encodeURIComponent(API_URL),opts):await fetch(API_URL,opts);
+  if(!r.ok) throw new Error("HTTP "+r.status);
+  return await r.json();
+}
+async function fetchCSV(){
+  try{ const r=await fetch(CSV_URL+(CSV_URL.includes("?")?"&":"?")+"_="+Date.now(),{cache:"no-store"}); if(r.ok) return await r.text(); }catch(e){}
+  const r=await fetch("api/sheet?url="+encodeURIComponent(CSV_URL),{cache:"no-store"});
+  if(!r.ok) throw new Error("HTTP "+r.status);
+  return await r.text();
+}
+function notice(text){ const el=$("#notice"); el.textContent=text||""; el.hidden=!text; }
+const timeNow=()=>new Date().toLocaleTimeString("th-TH",{hour:"2-digit",minute:"2-digit"});
+async function load(){
+  let warn="";
+  let ok=false;
+  if(API_URL){
+    try{
+      const j=await apiGet();
+      if(!j||!j.ok) throw new Error((j&&j.error)||"api");
+      setItems(j.rows||[],j.version,"api"); ok=true;
+    }catch(e){ warn="เชื่อมต่อ Apps Script ไม่ได้ ตอนนี้จึงแก้ไขจากหน้าเว็บไม่ได้ (ตรวจว่าตั้งเว็บแอปเป็น ผู้ที่มีสิทธิ์เข้าถึง: ทุกคน)"; }
+  }
+  if(!ok&&CSV_URL){
+    try{ setItems(rowsFromCSV(await fetchCSV()),null,"csv"); ok=true; }
+    catch(e){ warn=warn||(e&&e.message==="no-header"?"อ่านชีตไม่ได้: ไม่พบหัวคอลัมน์ “รายละเอียดสินค้า”":"โหลดข้อมูลจาก Google Sheets ไม่ได้"); }
+  }
+  if(!ok&&!items){
+    try{
+      const r=await fetch(FALLBACK_FILE,{cache:"no-store"}); if(!r.ok) throw new Error("HTTP "+r.status);
+      setItems(rowsFromJSON(await r.json()),null,"file"); ok=true;
+      if(warn) warn+=" กำลังแสดงข้อมูลชุดเดิมแทน";
+    }catch(e){}
+  }
+  if(!items){ $("#rows").innerHTML='<tr><td colspan="7" class="empty">โหลดรายการไม่สำเร็จ ลองรีเฟรชหน้านี้อีกครั้ง</td></tr>'; notice(warn); return; }
+  if(!ok&&items) warn=warn?warn+" กำลังแสดงข้อมูลที่โหลดไว้ล่าสุด":"";
+  notice(warn);
+  $("#source").textContent=
+    source==="api"?`ข้อมูลจาก Google Sheets · โหลดล่าสุด ${timeNow()} น.`:
+    source==="csv"?`ข้อมูลจาก Google Sheets · โหลดล่าสุด ${timeNow()} น. · สิ่งที่แก้ในชีตจะขึ้นบนเว็บภายในไม่กี่นาที`:
+    "ข้อมูลจากไฟล์ data/items.json";
+  if(editing&&source!=="api"){ editing=false; }
+  const lost=remapDraft();
+  if(lost) setMsg(`มี ${lost} รายการที่แก้ไว้ถูกเปลี่ยนในชีตก่อน จึงไม่ได้นำมาใส่`,"warn");
+  maybeRestore();
+  render(); updateTools();
+}
+const canEdit=()=>!!API_URL&&source==="api"&&!!version;
+
+/* ---------- categories and rows on screen ---------- */
 function assignCats(list){
   const extra=[];
   for(const it of list){
-    const n=it.cat.trim(), low=n.toLowerCase();
+    const n=str(it.cat).trim(), low=n.toLowerCase();
     const k=KNOWN.find(c=>c.name.toLowerCase()===low);
     if(k){ it.ck=k.key; continue; }
     const label=n||"ไม่ระบุหมวด", key="x-"+label;
@@ -296,99 +442,328 @@ function assignCats(list){
   cats=KNOWN.map(c=>({...c,cls:c.key})).concat(extra);
   if(cat!=="all"&&!cats.some(c=>c.key===cat)) cat="all";
 }
-function ordered(){
+function rowsNow(){
+  if(!items) return [];
+  let list;
+  if(!editing) list=items.map(it=>({...it,_o:it,_new:false,_del:false}));
+  else{
+    list=items.map(it=>({...it,...((draft.e[it.id]||{}).v||{}),_o:it,_new:false,_del:isDeleted(it.id)}));
+    for(const it of draft.a) list.push({...it,_o:null,_new:true,_del:false});
+  }
+  if(!editing) list=list.filter(it=>it.item);
+  assignCats(list);
   const out=[]; let n=0;
-  for(const c of cats) for(const it of items) if(it.ck===c.key) out.push(it);
-  for(const it of out){ it.no=++n; it.st=statusOf(it.qty); }
+  for(const c of cats) for(const it of list) if(it.ck===c.key) out.push(it);
+  for(const it of out){ it._no=it._del?null:++n; const p=num(it.qty); it._qv=p.v; it._st=statusOf(p.v); }
   return out;
 }
-
 function typeHTML(v){
   if(!v) return '<span class="todo">รอกรอก</span>';
-  const t=TYPES.find(o=>o.v.toLowerCase()===v.toLowerCase());
+  const t=TYPES.find(o=>o.v.toLowerCase()===str(v).toLowerCase());
   return t?`<span class="pill ${t.cls}">${esc(t.v)}</span>`:esc(v);
 }
-function rowHTML(it,c){
-  return `<tr class="item ${c.cls}"><td class="no">${it.no}</td>`+
+function readRow(it,c){
+  const q=it._qv!==null?`<b>${fmt(it._qv)}</b>`:(it.qty?`<span class="raw">${esc(it.qty)}</span>`:"");
+  return `<tr class="item ${c.cls}"><td class="no">${it._no}</td>`+
     `<td class="code">${it.code?`<span class="codeval">${esc(it.code)}</span>`:'<span class="todo">รอกรอก</span>'}</td>`+
     `<td class="desc">${esc(it.item)}</td>`+
     `<td class="unit">${it.unit?esc(it.unit):'<span class="dash">–</span>'}</td>`+
-    `<td class="qty">${it.qty===null?"":`<b>${fmt(it.qty)}</b>`}<span class="pill ${STATUS[it.st][1]}">${STATUS[it.st][0]}</span></td>`+
+    `<td class="qty">${q}<span class="pill ${STATUS[it._st][1]}">${STATUS[it._st][0]}</span></td>`+
     `<td class="sup">${it.sup?esc(it.sup):"–"}</td>`+
     `<td class="type">${typeHTML(it.type)}</td></tr>`;
 }
+function field(it,f,ph,extra){
+  const v=str(it[f]), cls=["cell"];
+  if(f==="qty") cls.push("num");
+  if(it._o&&v!==str(it._o[f])) cls.push("dirty");
+  if(invalid.has(it.id+":"+f)) cls.push("invalid");
+  return `<input class="${cls.join(" ")}" data-f="${f}" value="${esc(v)}" placeholder="${ph}" aria-label="${LABEL[f]} ${esc(it.item||"รายการใหม่")}" autocomplete="off"${extra||""}${it._del?" disabled":""}>`;
+}
+function typeSelect(it){
+  const v=str(it.type), opts=TYPES.map(o=>o.v);
+  const all=(v&&!opts.includes(v)?[v]:[]).concat(opts);
+  const cls=["cell"]; if(it._o&&v!==str(it._o.type)) cls.push("dirty");
+  return `<select class="${cls.join(" ")}" data-f="type" aria-label="ประเภทสินค้า ${esc(it.item||"รายการใหม่")}"${it._del?" disabled":""}><option value="">เลือกประเภท</option>${all.map(o=>`<option value="${esc(o)}"${o===v?" selected":""}>${esc(o)}</option>`).join("")}</select>`;
+}
+function editRow(it,c){
+  const cls=["item",c.cls]; if(it._new) cls.push("new"); if(it._del) cls.push("deleted");
+  const name=esc(it.item||"รายการใหม่");
+  return `<tr class="${cls.join(" ")}" data-id="${esc(it.id)}"><td class="no">${it._no===null?"–":it._no}</td>`+
+    `<td class="code">${field(it,"code","รหัส")}</td>`+
+    `<td class="desc">${field(it,"item","ชื่อ ยี่ห้อ ขนาด")}</td>`+
+    `<td class="unit">${field(it,"unit","หน่วย",' list="dl-unit"')}</td>`+
+    `<td class="qty">${field(it,"qty","จำนวน",' inputmode="decimal"')}</td>`+
+    `<td class="sup">${field(it,"sup","ผู้ส่ง",' list="dl-sup"')}</td>`+
+    `<td class="type">${typeSelect(it)}</td>`+
+    `<td class="act">${it._del?`<button type="button" class="rowbtn" data-undel="${esc(it.id)}" aria-label="เลิกลบ ${name}">เลิกลบ</button>`:`<button type="button" class="rowbtn del" data-del="${esc(it.id)}" aria-label="ลบ ${name}">ลบ</button>`}</td></tr>`;
+}
+function fillLists(list){
+  const fill=(id,f)=>{
+    const vals=[...new Set(list.map(it=>str(it[f]).trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"th"));
+    document.getElementById(id).innerHTML=vals.map(v=>`<option value="${esc(v)}"></option>`).join("");
+  };
+  fill("dl-unit","unit"); fill("dl-sup","sup");
+}
 function render(){
+  document.body.classList.toggle("editing",editing);
+  $("#thAct").hidden=!editing;
   if(!items) return;
-  const all=ordered();
-  $("#tiles").innerHTML=TILES.map(t=>`<button type="button" class="tile ${t.cls}" data-st="${t.k}" aria-pressed="${st===t.k}"><b>${t.k==="all"?all.length:all.filter(it=>it.st===t.k).length}</b><span>${t.label}</span></button>`).join("");
-  $("#chips").innerHTML=`<button type="button" class="chip s-all" data-cat="all" aria-pressed="${cat==="all"}"><i></i>ทุกหมวด <em>${all.length}</em></button>`+
-    cats.map(c=>`<button type="button" class="chip ${c.cls}" data-cat="${esc(c.key)}" aria-pressed="${cat===c.key}"><i></i>${esc(c.name)} <em>${all.filter(it=>it.ck===c.key).length}</em></button>`).join("");
+  const cols=editing?8:7;
+  const all=rowsNow(), live=all.filter(it=>!it._del);
+  $("#tiles").innerHTML=TILES.map(t=>`<button type="button" class="tile ${t.cls}" data-st="${t.k}" aria-pressed="${st===t.k}"><b>${t.k==="all"?live.length:live.filter(it=>it._st===t.k).length}</b><span>${t.label}</span></button>`).join("");
+  $("#chips").innerHTML=`<button type="button" class="chip s-all" data-cat="all" aria-pressed="${cat==="all"}"><i></i>ทุกหมวด <em>${live.length}</em></button>`+
+    cats.map(c=>`<button type="button" class="chip ${c.cls}" data-cat="${esc(c.key)}" aria-pressed="${cat===c.key}"><i></i>${esc(c.name)} <em>${live.filter(it=>it.ck===c.key).length}</em></button>`).join("");
   const q=$("#q").value.trim().toLowerCase();
-  const vis=all.filter(it=>(cat==="all"||it.ck===cat)&&(st==="all"||it.st===st)&&
-    (!q||[it.code,it.item,it.unit,it.sup,it.type].join(" ").toLowerCase().includes(q)));
+  const bad=new Set([...invalid].map(k=>k.split(":")[0]));
+  const hit=it=>(st==="all"||it._st===st)&&(!q||[it.code,it.item,it.unit,it.sup,it.type].map(str).join(" ").toLowerCase().includes(q));
+  const vis=all.filter(it=>(cat==="all"||it.ck===cat)&&(hit(it)||(editing&&(it._new||bad.has(it.id)))));
   let html="";
   for(const c of cats){
     const list=vis.filter(it=>it.ck===c.key); if(!list.length) continue;
-    const need=list.filter(it=>it.st==="out"||it.st==="low").length;
-    html+=`<tr class="band ${c.cls}"><td colspan="7"><h3>${esc(c.name)} <small>${list.length} รายการ · ${esc(c.hint)}${need?` · ต้องดู ${need} รายการ`:""}</small></h3></td></tr>`;
-    html+=list.map(it=>rowHTML(it,c)).join("");
+    const shown=list.filter(it=>!it._del);
+    const need=shown.filter(it=>it._st==="out"||it._st==="low").length;
+    html+=`<tr class="band ${c.cls}"><td colspan="${cols}"><h3>${esc(c.name)} <small>${shown.length} รายการ · ${esc(c.hint)}${need?` · ต้องดู ${need} รายการ`:""}</small></h3></td></tr>`;
+    html+=list.map(it=>editing?editRow(it,c):readRow(it,c)).join("");
   }
-  $("#rows").innerHTML=html||`<tr><td colspan="7" class="empty">ไม่พบรายการที่ตรงกับการค้นหา ลองพิมพ์คำอื่น หรือกด “ทุกหมวด”</td></tr>`;
-  $("#count").textContent=`แสดง ${vis.length} จาก ${all.length} รายการ`;
+  $("#rows").innerHTML=html||`<tr><td colspan="${cols}" class="empty">ไม่พบรายการที่ตรงกับการค้นหา ลองพิมพ์คำอื่น หรือกด “ทุกหมวด”</td></tr>`;
+  $("#count").textContent=`แสดง ${vis.filter(it=>!it._del).length} จาก ${live.length} รายการ`;
+  fillLists(live);
+  if(editing) fillCatSelect();
 }
 
-/* loading: Google Sheet first (straight, then through /api/sheet), else the saved file */
-async function fetchSheet(){
-  try{
-    const r=await fetch(SHEET_URL+(SHEET_URL.includes("?")?"&":"?")+"_="+Date.now(),{cache:"no-store"});
-    if(r.ok) return await r.text();
-  }catch(e){}
-  const r=await fetch("api/sheet?url="+encodeURIComponent(SHEET_URL),{cache:"no-store"});
-  if(!r.ok) throw new Error("HTTP "+r.status);
-  return await r.text();
+/* ---------- toolbar, sign-in ---------- */
+function setMsg(text,kind){ const el=$("#saveState"); el.textContent=text||""; el.className="savestate"+(kind?" "+kind:""); }
+function updateTools(){
+  const n=changeCount();
+  $("#btnSheet").hidden=!(pw&&EDIT_URL);
+  $("#btnLogout").hidden=!pw||editing;
+  $("#btnEdit").hidden=editing||!canEdit();
+  $("#btnCancel").hidden=!editing;
+  $("#btnSave").hidden=!editing;
+  $("#btnSave").disabled=saving||n===0;
+  $("#btnSave").textContent=saving?"กำลังบันทึก…":(n?`บันทึก (${n} รายการ)`:"บันทึก");
+  $("#editnote").hidden=!editing;
+  $("#addPanel").hidden=!editing;
 }
-function notice(text){ const el=$("#notice"); el.textContent=text||""; el.hidden=!text; }
-const timeNow=()=>new Date().toLocaleTimeString("th-TH",{hour:"2-digit",minute:"2-digit"});
-async function load(){
-  if(SHEET_URL){
-    try{
-      const list=itemsFromCSV(await fetchSheet());
-      items=list; assignCats(items); render(); notice("");
-      $("#source").textContent=`ข้อมูลจาก Google Sheets · โหลดล่าสุด ${timeNow()} น. · สิ่งที่แก้ในชีตจะขึ้นบนเว็บภายในไม่กี่นาที`;
-      return;
-    }catch(e){
-      if(items){ notice(`โหลดข้อมูลใหม่จาก Google Sheets ไม่ได้ กำลังแสดงข้อมูลที่โหลดไว้ล่าสุด`); return; }
-      notice(e&&e.message==="no-header"
-        ? "อ่านชีตไม่ได้: ไม่พบหัวคอลัมน์ “รายละเอียดสินค้า” ตรวจว่าเผยแพร่ชีต “รายการ” และแถวแรกเป็นหัวตาราง กำลังแสดงข้อมูลชุดเดิมแทน"
-        : "โหลดข้อมูลจาก Google Sheets ไม่ได้ กำลังแสดงข้อมูลชุดเดิมแทน");
-    }
-  }
+function enterEdit(){
+  editing=true; invalid=new Set(); setMsg(""); resetAddForm();
+  if(cat!=="all") $("#a-cat").value=cat;
+  render(); updateTools();
+}
+$("#btnSheet").href=EDIT_URL||"#";
+$("#btnEdit").addEventListener("click",()=>{
+  if(!canEdit()) return;
+  if(pw){ enterEdit(); return; }
+  $("#loginPanel").hidden=false; $("#loginMsg").textContent=""; $("#pwInput").value=""; $("#pwInput").focus();
+});
+$("#btnLoginCancel").addEventListener("click",()=>{ $("#loginPanel").hidden=true; });
+$("#loginForm").addEventListener("submit",async e=>{
+  e.preventDefault();
+  const p=$("#pwInput").value, msg=$("#loginMsg");
+  if(!p){ msg.textContent="ใส่รหัสผ่านก่อน"; msg.className="formmsg warn"; return; }
+  $("#btnLogin").disabled=true; msg.textContent="กำลังตรวจรหัสผ่าน…"; msg.className="formmsg";
   try{
-    const r=await fetch(FALLBACK_FILE,{cache:"no-store"});
-    if(!r.ok) throw new Error("HTTP "+r.status);
-    const j=await r.json();
-    items=itemsFromJSON(Array.isArray(j)?j:[]); assignCats(items); render();
-    $("#source").textContent=SHEET_URL?"ข้อมูลชุดเดิมจากไฟล์ data/items.json":"ข้อมูลจากไฟล์ data/items.json · ยังไม่ได้ใส่ลิงก์ Google Sheets ในไฟล์ config.js";
-  }catch(e){
-    $("#rows").innerHTML='<tr><td colspan="7" class="empty">โหลดรายการไม่สำเร็จ ลองรีเฟรชหน้านี้อีกครั้ง</td></tr>';
+    const j=await apiPost({action:"check",password:p});
+    if(j&&j.ok){
+      pw=p; if($("#pwRemember").checked) store.set(PW_KEY,p); else store.del(PW_KEY);
+      $("#loginPanel").hidden=true; maybeRestore(); if(!editing) enterEdit(); else { render(); updateTools(); }
+    }else if(j&&j.error==="locked"){ msg.textContent="ใส่รหัสผิดหลายครั้งเกินไป รอประมาณ 10 นาทีแล้วลองใหม่"; msg.className="formmsg warn"; }
+    else { msg.textContent="รหัสผ่านไม่ถูกต้อง"; msg.className="formmsg warn"; }
+  }catch(err){ msg.textContent="เชื่อมต่อไม่ได้ ลองใหม่อีกครั้ง"; msg.className="formmsg warn"; }
+  $("#btnLogin").disabled=false;
+});
+$("#btnLogout").addEventListener("click",()=>{ pw=""; store.del(PW_KEY); setMsg("ออกจากระบบแล้ว"); updateTools(); });
+
+/* ---------- editing ---------- */
+let cancelArmed=null;
+$("#btnCancel").addEventListener("click",()=>{
+  if(changeCount()&&!cancelArmed){
+    $("#btnCancel").textContent="กดอีกครั้งเพื่อทิ้งที่แก้ไว้";
+    cancelArmed=setTimeout(()=>{cancelArmed=null; $("#btnCancel").textContent="ยกเลิก";},4000);
+    return;
+  }
+  clearTimeout(cancelArmed); cancelArmed=null; $("#btnCancel").textContent="ยกเลิก";
+  draft={e:{},a:[],d:[]}; invalid=new Set(); store.del(DRAFT_KEY); editing=false; setMsg(""); render(); updateTools();
+});
+function setField(id,f,v){
+  const added=draft.a.find(x=>x.id===id); if(added){ added[f]=v; return; }
+  const o=items.find(x=>x.id===id); if(!o) return;
+  if(v===str(o[f])){ const e=draft.e[id]; if(e){ delete e.v[f]; if(!Object.keys(e.v).length) delete draft.e[id]; } }
+  else{ const e=draft.e[id]||(draft.e[id]={o:snap(o),v:{}}); e.v[f]=v; }
+}
+$("#rows").addEventListener("input",e=>{
+  const el=e.target.closest(".cell"); if(!el) return;
+  const tr=el.closest("tr[data-id]"); if(!tr) return;
+  const id=tr.dataset.id, f=el.dataset.f;
+  setField(id,f,el.value);
+  if(invalid.delete(id+":"+f)) el.classList.remove("invalid");
+  const o=items.find(x=>x.id===id); if(o) el.classList.toggle("dirty",el.value!==str(o[f]));
+  store.set(DRAFT_KEY,draft); setMsg(""); updateTools();
+});
+$("#rows").addEventListener("keydown",e=>{
+  const el=e.target.closest("input.cell"); if(!el||e.key!=="Enter") return;
+  e.preventDefault();
+  const all=[...document.querySelectorAll(`#rows input.cell[data-f="${el.dataset.f}"]:not(:disabled)`)];
+  const next=all[all.indexOf(el)+(e.shiftKey?-1:1)]; if(next){ next.focus(); next.select(); }
+});
+$("#rows").addEventListener("click",e=>{
+  const del=e.target.closest("[data-del]"), und=e.target.closest("[data-undel]");
+  if(del){
+    const id=del.dataset.del, i=draft.a.findIndex(x=>x.id===id);
+    if(i>=0) draft.a.splice(i,1);
+    else if(!isDeleted(id)){ const o=items.find(x=>x.id===id); if(o){ delete draft.e[id]; draft.d.push({id,o:snap(o)}); } }
+    for(const k of [...invalid]) if(k.startsWith(id+":")) invalid.delete(k);
+    store.set(DRAFT_KEY,draft); render(); updateTools();
+  }else if(und){
+    draft.d=draft.d.filter(x=>x.id!==und.dataset.undel); store.set(DRAFT_KEY,draft); render(); updateTools();
+  }
+});
+
+/* add-item form: pick the category, fill in, press "+ เพิ่มรายการ" */
+function fillCatSelect(){
+  const sel=$("#a-cat"), keep=sel.value;
+  sel.innerHTML='<option value="">เลือกหมวด</option>'+cats.filter(c=>c.cls!=="other"||c.name!=="ไม่ระบุหมวด").map(c=>`<option value="${esc(c.name)}">${esc(c.name)}</option>`).join("");
+  if([...sel.options].some(o=>o.value===keep)) sel.value=keep;
+}
+$("#a-type").innerHTML='<option value="">เลือกประเภท</option>'+TYPES.map(o=>`<option value="${esc(o.v)}">${esc(o.v)}</option>`).join("");
+function addMsg(text,kind){ const el=$("#addMsg"); el.textContent=text||""; el.className="formmsg"+(kind?" "+kind:""); }
+function resetAddForm(){
+  ["a-code","a-item","a-unit","a-qty","a-sup"].forEach(k=>{ $("#"+k).value=""; });
+  $("#a-type").value=""; fillCatSelect(); $("#a-cat").value="";
+  document.querySelectorAll("#addForm .invalid").forEach(el=>el.classList.remove("invalid"));
+  addMsg("");
+}
+$("#addForm").addEventListener("input",e=>e.target.classList.remove("invalid"));
+$("#addForm").addEventListener("change",e=>e.target.classList.remove("invalid"));
+$("#addForm").addEventListener("submit",e=>{
+  e.preventDefault();
+  if(!editing) return;
+  const v=k=>$("#"+k).value;
+  const c=v("a-cat"), item=v("a-item").trim(), qty=v("a-qty").trim(), errs=[];
+  if(!c){ errs.push("เลือกหมวด"); $("#a-cat").classList.add("invalid"); }
+  if(!item){ errs.push("กรอกรายละเอียดสินค้า"); $("#a-item").classList.add("invalid"); }
+  if(!num(qty).ok){ errs.push("จำนวนต้องเป็นตัวเลข"); $("#a-qty").classList.add("invalid"); }
+  if(errs.length){ addMsg("ยังเพิ่มไม่ได้: "+errs.join(" · "),"warn"); const f=document.querySelector("#addForm .invalid"); if(f) f.focus(); return; }
+  const id="n"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+  draft.a.push({id,cat:c,code:v("a-code").trim(),item,unit:v("a-unit").trim(),qty,sup:v("a-sup").trim(),type:v("a-type")});
+  store.set(DRAFT_KEY,draft);
+  ["a-code","a-item","a-unit","a-qty","a-sup"].forEach(k=>{ $("#"+k).value=""; }); $("#a-type").value="";
+  render(); updateTools();
+  addMsg(`เพิ่ม “${item}” ในหมวด ${c} แล้ว · อย่าลืมกดบันทึก`,"ok");
+  $("#a-code").focus();
+});
+
+/* ---------- saving to the sheet ---------- */
+function buildRows(){
+  invalid=new Set();
+  const rows=[];
+  const take=(it,orig)=>{
+    const o={}; ROWKEYS.forEach(k=>o[k]=str(it[k]).trim());
+    if(!o.item) invalid.add(it.id+":item");
+    const qtyChanged=!orig||str(it.qty)!==str(orig.qty);
+    if(qtyChanged&&!num(o.qty).ok) invalid.add(it.id+":qty");
+    rows.push(o);
+  };
+  for(const it of items){
+    if(isDeleted(it.id)) continue;
+    take({...it,...((draft.e[it.id]||{}).v||{})},it);
+  }
+  for(const it of draft.a){ if(FIELDS.every(f=>!str(it[f]).trim())) continue; take(it,null); }
+  return rows;
+}
+const sameRows=(a,b)=>a.length===b.length&&a.every((r,i)=>sig(r)===sig(b[i]));
+function finishSave(rows,ver){
+  setItems(rows,ver,"api");
+  draft={e:{},a:[],d:[]}; store.del(DRAFT_KEY); editing=false; saving=false; invalid=new Set();
+  $("#source").textContent=`ข้อมูลจาก Google Sheets · บันทึกล่าสุด ${timeNow()} น.`;
+  render(); updateTools(); setMsg("บันทึกลง Google Sheets แล้ว","ok");
+}
+$("#btnSave").addEventListener("click",async()=>{
+  if(saving||!changeCount()||!canEdit()) return;
+  if(!pw){ $("#loginPanel").hidden=false; $("#pwInput").focus(); return; }
+  const rows=buildRows();
+  if(invalid.size){
+    render(); updateTools();
+    setMsg(`มี ${invalid.size} ช่องที่ต้องแก้ก่อนบันทึก (ช่องสีแดง: ต้องมีรายละเอียดสินค้า และจำนวนต้องเป็นตัวเลข)`,"warn");
+    const f=document.querySelector("#rows .cell.invalid"); if(f) f.focus();
+    return;
+  }
+  saving=true; store.set(DRAFT_KEY,draft); setMsg("กำลังบันทึก…"); updateTools();
+  let j=null;
+  try{ j=await apiPost({action:"save",password:pw,version,rows}); }
+  catch(err){
+    /* the answer was lost: look at the sheet to see whether the save went in */
+    try{ const now=await apiGet(); if(now&&now.ok&&sameRows(now.rows||[],rows)){ finishSave(now.rows,now.version); return; } }catch(e){}
+    saving=false; updateTools(); setMsg("บันทึกไม่สำเร็จ ลองกดบันทึกอีกครั้ง","warn"); return;
+  }
+  if(j&&j.ok){ finishSave(j.rows||rows,j.version); return; }
+  saving=false;
+  const code=j&&j.error;
+  if(code==="conflict"){
+    setMsg("มีคนแก้ชีตระหว่างที่คุณแก้ กำลังโหลดข้อมูลล่าสุด…","warn"); updateTools();
+    await load();
+    setMsg("โหลดข้อมูลล่าสุดแล้ว ที่คุณแก้ยังอยู่ ตรวจดูอีกครั้งแล้วกดบันทึก","warn");
+  }else if(code==="wrong_password"){
+    pw=""; store.del(PW_KEY); updateTools();
+    $("#loginPanel").hidden=false; $("#loginMsg").textContent="รหัสผ่านเปลี่ยนไปแล้ว ใส่รหัสใหม่แล้วกดบันทึกอีกครั้ง"; $("#loginMsg").className="formmsg warn"; $("#pwInput").focus();
+    setMsg("ยังไม่ได้บันทึก","warn");
+  }else if(code==="locked"){
+    setMsg("ใส่รหัสผิดหลายครั้งเกินไป รอประมาณ 10 นาทีแล้วลองใหม่","warn"); updateTools();
+  }else{
+    setMsg("บันทึกไม่สำเร็จ"+(code?` (${code})`:"")+" ลองกดบันทึกอีกครั้ง","warn"); updateTools();
+  }
+});
+
+/* ---------- unsaved work kept in this browser ---------- */
+function remapDraft(){
+  if(!items) return 0;
+  const used=new Set(); let lost=0;
+  const find=(o,prefer)=>{
+    const s=sig(o);
+    const p=items.find(x=>x.id===prefer);
+    if(p&&!used.has(p.id)&&sig(p)===s){ used.add(p.id); return p.id; }
+    const m=items.find(x=>!used.has(x.id)&&sig(x)===s);
+    if(m){ used.add(m.id); return m.id; }
+    return null;
+  };
+  const d=[]; for(const x of draft.d||[]){ const id=x&&x.o?find(x.o,x.id):null; if(id) d.push({id,o:x.o}); else lost++; }
+  const e={};
+  for(const [id,ed] of Object.entries(draft.e||{})){
+    const nid=ed&&ed.o?find(ed.o,id):null; if(!nid){ lost++; continue; }
+    const o=items.find(x=>x.id===nid), v={};
+    for(const [f,val] of Object.entries(ed.v||{})) if(FIELDS.includes(f)&&typeof val==="string"&&val!==str(o[f])) v[f]=val;
+    if(Object.keys(v).length) e[nid]={o:ed.o,v};
+  }
+  draft.e=e; draft.d=d; draft.a=Array.isArray(draft.a)?draft.a.filter(x=>x&&x.id):[];
+  if(changeCount()) store.set(DRAFT_KEY,draft); else store.del(DRAFT_KEY);
+  return lost;
+}
+function maybeRestore(){
+  if(editing||!pw||!canEdit()) return;
+  const d=store.get(DRAFT_KEY);
+  if(!d||typeof d!=="object") return;
+  draft={e:d.e&&typeof d.e==="object"?d.e:{},a:Array.isArray(d.a)?d.a:[],d:Array.isArray(d.d)?d.d:[]};
+  const lost=remapDraft();
+  if(changeCount()){
+    editing=true; invalid=new Set(); resetAddForm();
+    setMsg("มีที่แก้ไว้แต่ยังไม่ได้บันทึก กดบันทึกเพื่อเก็บ"+(lost?` (${lost} รายการถูกเปลี่ยนในชีตก่อน จึงไม่ได้นำมาใส่)`:""),"warn");
   }
 }
 
+/* ---------- filters, reload ---------- */
 document.addEventListener("click",e=>{
   const t=e.target.closest("[data-st]"), c=e.target.closest("[data-cat]");
-  if(t){st=t.dataset.st; render(); const b=document.querySelector(`[data-st="${st}"]`); if(b) b.focus();}
-  else if(c){cat=c.dataset.cat; render(); const b=[...document.querySelectorAll("[data-cat]")].find(x=>x.dataset.cat===cat); if(b) b.focus();}
+  if(t){ st=t.dataset.st; render(); const b=document.querySelector(`[data-st="${st}"]`); if(b) b.focus(); }
+  else if(c){ cat=c.dataset.cat; render(); const b=[...document.querySelectorAll("[data-cat]")].find(x=>x.dataset.cat===cat); if(b) b.focus(); }
 });
 $("#q").addEventListener("input",render);
-if(EDIT_URL){ $("#btnEditSheet").href=EDIT_URL; $("#btnEditSheet").hidden=false; }
 $("#btnReload").addEventListener("click",async()=>{
   const b=$("#btnReload"); b.disabled=true; b.textContent="กำลังโหลด…";
   await load();
   b.disabled=false; b.textContent="โหลดข้อมูลล่าสุด";
 });
 load();
-/* keep a screen left open up to date */
-setInterval(()=>{ if(SHEET_URL&&document.visibilityState==="visible") load(); },REFRESH_MS);
+setInterval(()=>{ if(!editing&&!saving&&document.visibilityState==="visible"&&(API_URL||CSV_URL)) load(); },REFRESH_MS);
 </script>
 </body>
 </html>
