@@ -140,7 +140,14 @@ tr.band.foldable h3{-webkit-user-select:none;user-select:none}
 .foldbtn{display:inline;font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cursor:pointer;border-radius:6px;text-align:left}
 .foldbtn:focus-visible{outline:3px solid var(--focus);outline-offset:3px}
 .chev{width:18px;height:18px;vertical-align:-3px;margin-right:7px}
-tr.band.folded .chev{transform:rotate(-90deg)}
+tr.folded .chev{transform:rotate(-90deg)}
+tr.kindrow.foldable td{cursor:pointer;-webkit-user-select:none;user-select:none}
+tr.kindrow.foldable:hover td{background:color-mix(in srgb,var(--cb) 55%,var(--card))}
+tr.kindrow.foldable .kname::before{display:none}
+tr.kindrow .chev{width:15px;height:15px;margin-right:6px;color:var(--c)}
+.foldall{margin-left:auto;align-self:center;font:inherit;font-family:var(--body);font-size:12px;font-weight:500;color:var(--muted);background:var(--card);border:1px solid var(--line);border-radius:8px;padding:3px 10px;cursor:pointer;white-space:nowrap}
+.foldall:hover{color:var(--ink);border-color:var(--c)}
+.foldall:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
 tr.kindrow td{background:var(--card);border-left:6px solid var(--cb);padding:9px 14px 6px 22px;border-bottom:1px dashed var(--line)}
 tr.kindrow .kname{font-weight:600;color:var(--ink)}
 tr.kindrow .kname::before{content:"";display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--c);margin-right:8px;vertical-align:middle}
@@ -345,6 +352,7 @@ const store={
 /* categories folded shut by the viewer (remembered in this browser only) */
 const folded=new Set((a=>Array.isArray(a)?a.filter(k=>typeof k==="string"):[])(store.get(FOLD_KEY)));
 const saveFolds=()=>store.set(FOLD_KEY,[...folded]);
+const kindKey=(ck,k)=>"k|"+ck+"|"+k;   /* a kind band's key; category keys never start with "k|" */
 const CHEV='<svg class="chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 /* a quantity cell: blank, a number, or (only when typed in the sheet) other text */
 function num(v){
@@ -597,30 +605,47 @@ function render(){
   const bad=new Set([...invalid].map(k=>k.split(":")[0]));
   const hit=it=>(st==="all"||it._st===st)&&(!q||[it.kind,it.code,it.item,it.unit,it.sup,it.type].map(str).join(" ").toLowerCase().includes(q));
   const vis=all.filter(it=>(cat==="all"||it.ck===cat)&&(hit(it)||(editing&&(it._new||bad.has(it.id)))));
-  /* folding applies to the full list; a search, tile or chip shows every match */
-  const filtering=!!q||st!=="all"||cat!=="all";
+  /* every view can fold its bands; only a typed search shows every match open.
+     On a one-category page the category band is the page title, so its kinds fold instead. */
+  const searching=!!q, single=cat!=="all";
+  const badIn=rows=>editing&&rows.some(it=>bad.has(it.id));
   let html="";
   for(const c of cats){
     const list=vis.filter(it=>it.ck===c.key); if(!list.length) continue;
     const shown=list.filter(it=>!it._del);
     const need=shown.filter(it=>it._st==="out"||it._st==="low").length;
-    const hasBad=editing&&list.some(it=>bad.has(it.id));
+    const hasBad=badIn(list);
     if(hasBad&&folded.delete(c.key)) saveFolds();   /* a row with an error opens its category and keeps it open */
-    const canFold=!filtering&&!hasBad;
+    const canFold=!searching&&!single&&!hasBad;
     const open=!canFold||!folded.has(c.key);
-    const name=canFold?`<button type="button" class="foldbtn" aria-expanded="${open}" title="${open?"กดเพื่อซ่อนรายการในหมวดนี้":"กดเพื่อแสดงรายการในหมวดนี้"}">${CHEV}${esc(c.name)}</button>`:esc(c.name);
-    html+=`<tr class="band ${c.cls}${canFold?" foldable":""}${open?"":" folded"}"${canFold?` data-fold="${esc(c.key)}"`:""}><td colspan="${cols}"><h3>${name} <small>${shown.length} รายการ · ${esc(c.hint)}${need?` · ต้องดู ${need} รายการ`:""}</small></h3></td></tr>`;
-    if(!open) continue;
     const grouped=list.some(it=>str(it.kind).trim());
-    let lastKind=null;
+    const kinds=grouped?[...new Set(list.map(it=>str(it.kind).trim()))]:[];
+    let allBtn="";
+    if(open&&!searching&&kinds.length>1){
+      const allShut=kinds.every(k=>folded.has(kindKey(c.key,k)));
+      allBtn=`<button type="button" class="foldall" data-foldall="${esc(c.key)}">${allShut?"กางทุกชนิด":"พับทุกชนิด"}</button>`;
+    }
+    const name=canFold?`<button type="button" class="foldbtn" aria-expanded="${open}" title="${open?"กดเพื่อซ่อนรายการในหมวดนี้":"กดเพื่อแสดงรายการในหมวดนี้"}">${CHEV}${esc(c.name)}</button>`:esc(c.name);
+    html+=`<tr class="band ${c.cls}${canFold?" foldable":""}${open?"":" folded"}"${canFold?` data-fold="${esc(c.key)}"`:""}><td colspan="${cols}"><h3>${name} <small>${shown.length} รายการ · ${esc(c.hint)}${need?` · ต้องดู ${need} รายการ`:""}</small>${allBtn}</h3></td></tr>`;
+    if(!open) continue;
+    let lastKind=null, kOpen=true;
     for(const it of list){
       const k=str(it.kind).trim();
       if(grouped&&k!==lastKind){
+        lastKind=k;
         const g=list.filter(x=>str(x.kind).trim()===k&&!x._del);
         const gneed=g.filter(x=>x._st==="out"||x._st==="low").length;
-        html+=`<tr class="kindrow ${c.cls}"><td colspan="${cols}"><span class="kname">${esc(k||"ยังไม่ระบุชนิด")}</span><small>${g.length} รายการ${gneed?` · ต้องดู ${gneed}`:""}</small></td></tr>`;
-        lastKind=k;
+        const kk=kindKey(c.key,k);
+        const kBad=badIn(list.filter(x=>str(x.kind).trim()===k));
+        if(kBad&&folded.delete(kk)) saveFolds();
+        const kCan=!searching&&!kBad;
+        kOpen=!kCan||!folded.has(kk);
+        const kname=`<span class="kname">${esc(k||"ยังไม่ระบุชนิด")}</span>`;
+        html+=`<tr class="kindrow ${c.cls}${kCan?" foldable":""}${kOpen?"":" folded"}"${kCan?` data-fold="${esc(kk)}"`:""}><td colspan="${cols}">`+
+          (kCan?`<button type="button" class="foldbtn" aria-expanded="${kOpen}" title="${kOpen?"กดเพื่อซ่อนรายการชนิดนี้":"กดเพื่อแสดงรายการชนิดนี้"}">${CHEV}${kname}</button>`:kname)+
+          `<small>${g.length} รายการ${gneed?` · ต้องดู ${gneed}`:""}</small></td></tr>`;
       }
+      if(!kOpen) continue;
       html+=editing?editRow(it,c):readRow(it,c);
     }
   }
@@ -696,6 +721,11 @@ $("#rows").addEventListener("input",e=>{
   const id=tr.dataset.id, f=el.dataset.f;
   if(el.dataset.opt&&(el.value==="__add"||el.value==="__rename")){ openOptEditor(el,el.value==="__add"?"add":"rename"); return; }
   setField(id,f,el.value);
+  if(f==="kind"){   /* a row moved to a folded kind would vanish on the next redraw: open that kind */
+    const v=el.value.trim(); let ch=false;
+    for(const k of [...folded]) if(k.startsWith("k|")&&k.slice(k.indexOf("|",2)+1)===v){ folded.delete(k); ch=true; }
+    if(ch) saveFolds();
+  }
   if(invalid.delete(id+":"+f)) el.classList.remove("invalid");
   const o=items.find(x=>x.id===id); if(o) el.classList.toggle("dirty",el.value!==str(o[f]));
   store.set(DRAFT_KEY,draft); setMsg(""); updateTools();
@@ -716,12 +746,21 @@ function toggleFold(key,fromKeyboard){
   if(!folded.delete(key)) folded.add(key);
   saveFolds(); render();
   if(fromKeyboard){
-    const tr=[...document.querySelectorAll("#rows tr.band[data-fold]")].find(x=>x.dataset.fold===key);
+    const tr=[...document.querySelectorAll("#rows tr[data-fold]")].find(x=>x.dataset.fold===key);
     const b=tr&&tr.querySelector(".foldbtn"); if(b) b.focus({preventScroll:true});
   }
 }
+function foldAllKinds(ck,fromKeyboard){
+  const keys=[...document.querySelectorAll("#rows tr.kindrow[data-fold]")].map(x=>x.dataset.fold).filter(k=>k.startsWith(kindKey(ck,"")));
+  const shut=keys.length&&keys.every(k=>folded.has(k));
+  keys.forEach(k=>shut?folded.delete(k):folded.add(k));
+  saveFolds(); render();
+  if(fromKeyboard){ const b=[...document.querySelectorAll("#rows [data-foldall]")].find(x=>x.dataset.foldall===ck); if(b) b.focus({preventScroll:true}); }
+}
 $("#rows").addEventListener("click",e=>{
-  const band=e.target.closest("tr.band[data-fold]");
+  const all=e.target.closest("[data-foldall]");
+  if(all){ foldAllKinds(all.dataset.foldall,e.detail===0); return; }
+  const band=e.target.closest("tr[data-fold]");
   if(band){ toggleFold(band.dataset.fold,e.detail===0); return; }
   const ok=e.target.closest("[data-optok]"), cancel=e.target.closest("[data-optcancel]");
   if(ok){ confirmOpt(ok.closest("td")); return; }
@@ -786,7 +825,8 @@ $("#addForm").addEventListener("submit",e=>{
   for(const [f,val] of [["unit",unitV],["sup",supV]]) if(val&&!OPTS[f].includes(val)&&!extraOpts[f].includes(val)) extraOpts[f].push(val);
   draft.a.push({id,cat:c,kind:v("a-kind").trim(),code:v("a-code").trim(),item,unit:unitV,qty,sup:supV,type:v("a-type")});
   store.set(DRAFT_KEY,draft);
-  const fc=cats.find(x=>x.name===c); if(fc&&folded.delete(fc.key)) saveFolds();   /* open the category so the new row shows */
+  const fc=cats.find(x=>x.name===c);   /* open the category and kind so the new row shows */
+  if(fc){ const a=folded.delete(fc.key), b=folded.delete(kindKey(fc.key,v("a-kind").trim())); if(a||b) saveFolds(); }
   ["a-code","a-item","a-qty"].forEach(k=>{ $("#"+k).value=""; }); $("#a-type").value="";
   comboReset("unit"); comboReset("sup");
   render(); updateTools();
