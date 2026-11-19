@@ -81,6 +81,12 @@ main.wrap{padding:26px 20px 60px;display:grid;gap:22px}
 #q{flex:1 1 280px;font:inherit;padding:10px 14px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
 #count{color:var(--muted);font-size:13px;white-space:nowrap}
 .btn{font:inherit;font-size:14px;font-weight:500;border-radius:10px;padding:8px 16px;cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--ink)}
+a.btn{text-decoration:none;display:inline-flex;align-items:center}
+.btn.primary{background:var(--ink);color:var(--card);border-color:transparent}
+.btn.ghost{background:transparent}
+.btn:disabled{opacity:.5;cursor:default}
+.btn[hidden]{display:none}
+.tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-left:auto}
 .chips{display:flex;gap:8px;flex-wrap:wrap}
 .chip{font:inherit;font-size:13px;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:5px 14px;cursor:pointer;display:inline-flex;gap:8px;align-items:center}
 .chip i{width:10px;height:10px;border-radius:50%;background:var(--c,var(--ink));display:inline-block}
@@ -165,6 +171,10 @@ footer{color:var(--muted);font-size:13px}
       <label for="q" class="sr-only">ค้นหาสินค้า ผู้ส่ง หรือรหัส</label>
       <input id="q" type="search" placeholder="ค้นหาชื่อสินค้า ผู้ส่ง หรือรหัส เช่น ดอยคำ, MAKRO, แก้ว">
       <span id="count"></span>
+      <div class="tools">
+        <button type="button" id="btnReload" class="btn ghost">โหลดข้อมูลล่าสุด</button>
+        <a id="btnEditSheet" class="btn primary" href="#" target="_blank" rel="noopener" title="สำหรับทีมงานที่ได้รับสิทธิ์แก้ไขชีต" hidden>แก้ไขข้อมูลใน Google Sheets</a>
+      </div>
     </div>
     <div class="chips" id="chips" role="group" aria-label="หมวดสินค้า"></div>
   </section>
@@ -206,6 +216,8 @@ const TILES=[
   {k:"none",label:"ยังไม่ได้นับรอบนี้",cls:"s-none"}
 ];
 const SHEET_URL=String(window.SHEET_CSV_URL||"").trim();
+/* the sheet that staff edit (only people it is shared with as Editor can change it) */
+const EDIT_URL=String(window.SHEET_EDIT_URL||"https://docs.google.com/spreadsheets/d/1fcB6b6RUewa_EGMoUudJuBJ2jZ1Zr4Bz_ng063DlZu0/edit").trim();
 const FALLBACK_FILE="data/items.json";
 const REFRESH_MS=5*60*1000;
 
@@ -368,6 +380,12 @@ document.addEventListener("click",e=>{
   else if(c){cat=c.dataset.cat; render(); const b=[...document.querySelectorAll("[data-cat]")].find(x=>x.dataset.cat===cat); if(b) b.focus();}
 });
 $("#q").addEventListener("input",render);
+if(EDIT_URL){ $("#btnEditSheet").href=EDIT_URL; $("#btnEditSheet").hidden=false; }
+$("#btnReload").addEventListener("click",async()=>{
+  const b=$("#btnReload"); b.disabled=true; b.textContent="กำลังโหลด…";
+  await load();
+  b.disabled=false; b.textContent="โหลดข้อมูลล่าสุด";
+});
 load();
 /* keep a screen left open up to date */
 setInterval(()=>{ if(SHEET_URL&&document.visibilityState==="visible") load(); },REFRESH_MS);
