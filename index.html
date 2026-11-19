@@ -134,6 +134,13 @@ th.act,td.act{width:76px;text-align:right}
 tr.band td{background:var(--cb);border-left:6px solid var(--c);padding:12px 14px}
 tr.band h3{font-size:16px;color:var(--c);display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
 tr.band h3 small{font-family:var(--body);font-weight:400;font-size:13px;color:var(--muted)}
+tr.band.foldable td{cursor:pointer}
+tr.band.foldable:hover td{background:color-mix(in srgb,var(--c) 9%,var(--cb))}
+tr.band.foldable h3{-webkit-user-select:none;user-select:none}
+.foldbtn{display:inline;font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cursor:pointer;border-radius:6px;text-align:left}
+.foldbtn:focus-visible{outline:3px solid var(--focus);outline-offset:3px}
+.chev{width:18px;height:18px;vertical-align:-3px;margin-right:7px}
+tr.band.folded .chev{transform:rotate(-90deg)}
 tr.kindrow td{background:var(--card);border-left:6px solid var(--cb);padding:9px 14px 6px 22px;border-bottom:1px dashed var(--line)}
 tr.kindrow .kname{font-weight:600;color:var(--ink)}
 tr.kindrow .kname::before{content:"";display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--c);margin-right:8px;vertical-align:middle}
@@ -310,7 +317,7 @@ const CSV_URL=String(window.SHEET_CSV_URL||"").trim();
 const API_URL=String(window.SHEET_API_URL||"").trim();
 const EDIT_URL=String(window.SHEET_EDIT_URL||"https://docs.google.com/spreadsheets/d/1fcB6b6RUewa_EGMoUudJuBJ2jZ1Zr4Bz_ng063DlZu0/edit").trim();
 const FALLBACK_FILE="data/items.json";
-const PW_KEY="quarter-web-pw", DRAFT_KEY="quarter-web-draft-v1";
+const PW_KEY="quarter-web-pw", DRAFT_KEY="quarter-web-draft-v1", FOLD_KEY="quarter-web-fold-v1";
 const FIELDS=["kind","code","item","unit","qty","sup","type"];
 const ROWKEYS=["cat","kind","code","item","unit","qty","sup","type"];
 const LABEL={kind:"ชนิดสินค้า",code:"รหัสเลขที่",item:"รายละเอียดสินค้า",unit:"หน่วยนับ",qty:"จำนวนทั้งหมด",sup:"ผู้ส่งสินค้า",type:"ประเภทสินค้า"};
@@ -335,6 +342,10 @@ const store={
   set(k,v){try{localStorage.setItem(k,typeof v==="string"?v:JSON.stringify(v))}catch(e){}},
   del(k){try{localStorage.removeItem(k)}catch(e){}}
 };
+/* categories folded shut by the viewer (remembered in this browser only) */
+const folded=new Set((a=>Array.isArray(a)?a.filter(k=>typeof k==="string"):[])(store.get(FOLD_KEY)));
+const saveFolds=()=>store.set(FOLD_KEY,[...folded]);
+const CHEV='<svg class="chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 /* a quantity cell: blank, a number, or (only when typed in the sheet) other text */
 function num(v){
   const t=str(v).trim().replace(/[,\s]/g,"");
@@ -586,12 +597,20 @@ function render(){
   const bad=new Set([...invalid].map(k=>k.split(":")[0]));
   const hit=it=>(st==="all"||it._st===st)&&(!q||[it.kind,it.code,it.item,it.unit,it.sup,it.type].map(str).join(" ").toLowerCase().includes(q));
   const vis=all.filter(it=>(cat==="all"||it.ck===cat)&&(hit(it)||(editing&&(it._new||bad.has(it.id)))));
+  /* folding applies to the full list; a search, tile or chip shows every match */
+  const filtering=!!q||st!=="all"||cat!=="all";
   let html="";
   for(const c of cats){
     const list=vis.filter(it=>it.ck===c.key); if(!list.length) continue;
     const shown=list.filter(it=>!it._del);
     const need=shown.filter(it=>it._st==="out"||it._st==="low").length;
-    html+=`<tr class="band ${c.cls}"><td colspan="${cols}"><h3>${esc(c.name)} <small>${shown.length} รายการ · ${esc(c.hint)}${need?` · ต้องดู ${need} รายการ`:""}</small></h3></td></tr>`;
+    const hasBad=editing&&list.some(it=>bad.has(it.id));
+    if(hasBad&&folded.delete(c.key)) saveFolds();   /* a row with an error opens its category and keeps it open */
+    const canFold=!filtering&&!hasBad;
+    const open=!canFold||!folded.has(c.key);
+    const name=canFold?`<button type="button" class="foldbtn" aria-expanded="${open}" title="${open?"กดเพื่อซ่อนรายการในหมวดนี้":"กดเพื่อแสดงรายการในหมวดนี้"}">${CHEV}${esc(c.name)}</button>`:esc(c.name);
+    html+=`<tr class="band ${c.cls}${canFold?" foldable":""}${open?"":" folded"}"${canFold?` data-fold="${esc(c.key)}"`:""}><td colspan="${cols}"><h3>${name} <small>${shown.length} รายการ · ${esc(c.hint)}${need?` · ต้องดู ${need} รายการ`:""}</small></h3></td></tr>`;
+    if(!open) continue;
     const grouped=list.some(it=>str(it.kind).trim());
     let lastKind=null;
     for(const it of list){
@@ -693,7 +712,17 @@ $("#rows").addEventListener("keydown",e=>{
   const all=[...document.querySelectorAll(`#rows input.cell[data-f="${el.dataset.f}"]:not(:disabled)`)];
   const next=all[all.indexOf(el)+(e.shiftKey?-1:1)]; if(next){ next.focus(); next.select(); }
 });
+function toggleFold(key,fromKeyboard){
+  if(!folded.delete(key)) folded.add(key);
+  saveFolds(); render();
+  if(fromKeyboard){
+    const tr=[...document.querySelectorAll("#rows tr.band[data-fold]")].find(x=>x.dataset.fold===key);
+    const b=tr&&tr.querySelector(".foldbtn"); if(b) b.focus({preventScroll:true});
+  }
+}
 $("#rows").addEventListener("click",e=>{
+  const band=e.target.closest("tr.band[data-fold]");
+  if(band){ toggleFold(band.dataset.fold,e.detail===0); return; }
   const ok=e.target.closest("[data-optok]"), cancel=e.target.closest("[data-optcancel]");
   if(ok){ confirmOpt(ok.closest("td")); return; }
   if(cancel){ closeOptEditor(cancel.closest("td")); return; }
@@ -757,6 +786,7 @@ $("#addForm").addEventListener("submit",e=>{
   for(const [f,val] of [["unit",unitV],["sup",supV]]) if(val&&!OPTS[f].includes(val)&&!extraOpts[f].includes(val)) extraOpts[f].push(val);
   draft.a.push({id,cat:c,kind:v("a-kind").trim(),code:v("a-code").trim(),item,unit:unitV,qty,sup:supV,type:v("a-type")});
   store.set(DRAFT_KEY,draft);
+  const fc=cats.find(x=>x.name===c); if(fc&&folded.delete(fc.key)) saveFolds();   /* open the category so the new row shows */
   ["a-code","a-item","a-qty"].forEach(k=>{ $("#"+k).value=""; }); $("#a-type").value="";
   comboReset("unit"); comboReset("sup");
   render(); updateTools();
