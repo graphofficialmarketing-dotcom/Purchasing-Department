@@ -104,8 +104,8 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center}
 .formgrid .btn{padding:0 16px}
 .formgrid label.check{display:flex;align-items:center;gap:6px;font-size:13px;height:36px}
 .f-pw{flex:0 0 240px}
-.f-cat{flex:0 0 160px} .f-kind{flex:0 0 150px} .f-code{flex:0 0 100px} .f-item{flex:1 1 200px} .f-unit{flex:0 0 90px}
-.f-qty{flex:0 0 80px} .f-sup{flex:0 0 140px} .f-type{flex:0 0 160px}
+.f-cat{flex:0 0 160px} .f-kind{flex:0 0 150px} .f-code{flex:0 0 100px} .f-item{flex:1 1 200px} .f-unit{flex:0 0 120px}
+.f-qty{flex:0 0 80px} .f-sup{flex:0 0 160px} .f-type{flex:0 0 160px}
 .formmsg{margin:8px 0 0;font-size:13px;color:var(--muted);min-height:1.4em}
 .formmsg.ok{color:var(--ok)} .formmsg.warn{color:var(--out)}
 .panel p.hint{margin:0 0 10px;color:var(--muted);font-size:13px}
@@ -168,6 +168,9 @@ select.cell{cursor:pointer}
 tr.item.new td:first-child{border-left-color:var(--ok)}
 tr.item.deleted td:not(.act){opacity:.45}
 .rowbtn{font:inherit;font-size:12px;border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:8px;padding:4px 10px;cursor:pointer;white-space:nowrap}
+.optedit{display:flex;gap:4px;align-items:center}
+.optedit .cell{min-width:0;flex:1}
+.optedit .rowbtn{padding:4px 7px}
 .rowbtn.del:hover{color:var(--out);border-color:var(--out)}
 
 .raw{--c:var(--raw);--cb:var(--raw-bg)} .pack{--c:var(--pack);--cb:var(--pack-bg)}
@@ -254,9 +257,9 @@ tr.item.deleted td:not(.act){opacity:.45}
         <label class="f-kind"><span>ชนิดสินค้า</span><input id="a-kind" class="cell" placeholder="เช่น โกโก้" list="dl-kind" autocomplete="off"></label>
         <label class="f-code"><span>รหัสเลขที่</span><input id="a-code" class="cell" placeholder="รหัส" autocomplete="off"></label>
         <label class="f-item"><span>รายละเอียดสินค้า *</span><input id="a-item" class="cell" placeholder="ชื่อ ยี่ห้อ ขนาด" autocomplete="off"></label>
-        <label class="f-unit"><span>หน่วยนับ</span><input id="a-unit" class="cell" placeholder="หน่วย" list="dl-unit" autocomplete="off"></label>
+        <label class="f-unit"><span>หน่วยนับ</span><select id="a-unit" class="cell" data-combo="unit"></select><input id="a-unit-new" class="cell" placeholder="หน่วยใหม่" autocomplete="off" hidden></label>
         <label class="f-qty"><span>จำนวนทั้งหมด</span><input id="a-qty" class="cell num" placeholder="จำนวน" inputmode="decimal" autocomplete="off"></label>
-        <label class="f-sup"><span>ผู้ส่งสินค้า</span><input id="a-sup" class="cell" placeholder="ผู้ส่ง" list="dl-sup" autocomplete="off"></label>
+        <label class="f-sup"><span>ผู้ส่งสินค้า</span><select id="a-sup" class="cell" data-combo="sup"></select><input id="a-sup-new" class="cell" placeholder="ชื่อผู้ส่งใหม่" autocomplete="off" hidden></label>
         <label class="f-type"><span>ประเภทสินค้า</span><select id="a-type" class="cell"></select></label>
         <button type="submit" class="btn primary">+ เพิ่มรายการ</button>
       </div>
@@ -316,6 +319,8 @@ let cats=KNOWN.map(c=>({...c,cls:c.key}));
 let draft={e:{},a:[],d:[]};          /* unsaved work: e = edits {id:{o:original,v:{field:value}}}, a = new rows, d = rows to delete */
 let editing=false, saving=false, invalid=new Set();
 let cat="all", st="all";
+let OPTS={unit:[],sup:[]};                 /* names offered in the unit and supplier dropdowns */
+const extraOpts={unit:[],sup:[]};          /* names added with "+ เพิ่มใหม่…" in this visit */
 let pw=""; try{ pw=localStorage.getItem(PW_KEY)||""; }catch(e){}
 
 const $=s=>document.querySelector(s);
@@ -497,6 +502,50 @@ function typeSelect(it){
   const cls=["cell"]; if(it._o&&v!==str(it._o.type)) cls.push("dirty");
   return `<select class="${cls.join(" ")}" data-f="type" aria-label="ประเภทสินค้า ${esc(it.item||"รายการใหม่")}"${it._del?" disabled":""}><option value="">เลือกประเภท</option>${all.map(o=>`<option value="${esc(o)}"${o===v?" selected":""}>${esc(o)}</option>`).join("")}</select>`;
 }
+function optSelect(it,f){
+  const v=str(it[f]).trim(), list=OPTS[f].slice();
+  if(v&&!list.includes(v)) list.unshift(v);
+  const cls=["cell"]; if(it._o&&str(it[f])!==str(it._o[f])) cls.push("dirty");
+  if(invalid.has(it.id+":"+f)) cls.push("invalid");
+  return `<select class="${cls.join(" ")}" data-f="${f}" data-opt="1" aria-label="${LABEL[f]} ${esc(it.item||"รายการใหม่")}"${it._del?" disabled":""}>`+
+    `<option value="">${f==="unit"?"เลือกหน่วย":"เลือกผู้ส่ง"}</option>`+
+    list.map(o=>`<option value="${esc(o)}"${o===v?" selected":""}>${esc(o)}</option>`).join("")+
+    `<option value="__add">+ เพิ่มใหม่…</option>`+
+    (v?`<option value="__rename">✎ แก้ชื่อ “${esc(v)}”…</option>`:"")+`</select>`;
+}
+function focusCell(id,f){ const el=document.querySelector(`#rows tr[data-id="${id}"] [data-f="${f}"]`); if(el) el.focus(); }
+function openOptEditor(sel,mode){
+  const td=sel.closest("td"), id=sel.closest("tr[data-id]").dataset.id, f=sel.dataset.f;
+  const row=rowsNow().find(x=>x.id===id), cur=row?str(row[f]).trim():"";
+  const ph=mode==="add"?(f==="unit"?"หน่วยใหม่":"ชื่อผู้ส่งใหม่"):"ชื่อใหม่";
+  td.innerHTML=`<div class="optedit"><input class="cell" data-optinput="${mode}" data-f="${f}" data-old="${esc(cur)}" value="${mode==="rename"?esc(cur):""}" placeholder="${ph}" aria-label="${mode==="add"?"เพิ่ม":"แก้ชื่อ"}${LABEL[f]}" autocomplete="off">`+
+    `<button type="button" class="rowbtn" data-optok aria-label="ตกลง">✓</button><button type="button" class="rowbtn" data-optcancel aria-label="ยกเลิก">✕</button></div>`;
+  const inp=td.querySelector("input"); inp.focus(); inp.select();
+}
+function closeOptEditor(td){ const inp=td.querySelector("[data-optinput]"), id=td.closest("tr[data-id]").dataset.id; render(); focusCell(id,inp?inp.dataset.f:"unit"); }
+function confirmOpt(td){
+  const inp=td.querySelector("[data-optinput]"); if(!inp) return;
+  const id=td.closest("tr[data-id]").dataset.id, f=inp.dataset.f, mode=inp.dataset.optinput, old=inp.dataset.old||"";
+  const val=inp.value.trim();
+  if(!val){ inp.classList.add("invalid"); inp.focus(); return; }
+  const same=OPTS[f].find(o=>o.toLowerCase()===val.toLowerCase());
+  if(mode==="add"){
+    const v=same||val;
+    if(!same) extraOpts[f].push(v);
+    setField(id,f,v);
+    store.set(DRAFT_KEY,draft); render(); updateTools(); focusCell(id,f);
+    setMsg(same?`มี “${same}” อยู่แล้ว เลือกให้แล้ว`:`เพิ่ม${LABEL[f]} “${v}” แล้ว · อย่าลืมกดบันทึก`,"ok");
+    return;
+  }
+  if(val===old){ closeOptEditor(td); return; }
+  const v=same&&same!==old?same:val;
+  let n=0;
+  for(const x of rowsNow()){ if(!x._del&&str(x[f]).trim()===old){ setField(x.id,f,v); n++; } }
+  const i=extraOpts[f].indexOf(old); if(i>=0) extraOpts[f].splice(i,1);
+  if(!extraOpts[f].includes(v)) extraOpts[f].push(v);
+  store.set(DRAFT_KEY,draft); render(); updateTools(); focusCell(id,f);
+  setMsg(`เปลี่ยน “${old}” เป็น “${v}” แล้ว ${n} รายการ · อย่าลืมกดบันทึก`,"ok");
+}
 function editRow(it,c){
   const cls=["item",c.cls]; if(it._new) cls.push("new"); if(it._del) cls.push("deleted");
   const name=esc(it.item||"รายการใหม่");
@@ -504,9 +553,9 @@ function editRow(it,c){
     `<td class="kind">${field(it,"kind","ชนิด",' list="dl-kind"')}</td>`+
     `<td class="code">${field(it,"code","รหัส")}</td>`+
     `<td class="desc">${field(it,"item","ชื่อ ยี่ห้อ ขนาด")}</td>`+
-    `<td class="unit">${field(it,"unit","หน่วย",' list="dl-unit"')}</td>`+
+    `<td class="unit">${optSelect(it,"unit")}</td>`+
     `<td class="qty">${field(it,"qty","จำนวน",' inputmode="decimal"')}</td>`+
-    `<td class="sup">${field(it,"sup","ผู้ส่ง",' list="dl-sup"')}</td>`+
+    `<td class="sup">${optSelect(it,"sup")}</td>`+
     `<td class="type">${typeSelect(it)}</td>`+
     `<td class="act">${it._del?`<button type="button" class="rowbtn" data-undel="${esc(it.id)}" aria-label="เลิกลบ ${name}">เลิกลบ</button>`:`<button type="button" class="rowbtn del" data-del="${esc(it.id)}" aria-label="ลบ ${name}">ลบ</button>`}</td></tr>`;
 }
@@ -524,6 +573,10 @@ function render(){
   if(!items) return;
   const cols=editing?9:7;
   const all=rowsNow(), live=all.filter(it=>!it._del);
+  for(const f of ["unit","sup"]){
+    const s=new Set(extraOpts[f]); live.forEach(it=>{ const v=str(it[f]).trim(); if(v) s.add(v); });
+    OPTS[f]=[...s].sort((a,b)=>a.localeCompare(b,"th"));
+  }
   $("#tiles").innerHTML=TILES.map(t=>`<button type="button" class="tile ${t.cls}" data-st="${t.k}" aria-pressed="${st===t.k}"><b>${t.k==="all"?live.length:live.filter(it=>it._st===t.k).length}</b><span>${t.label}</span></button>`).join("");
   $("#chips").innerHTML=`<button type="button" class="chip s-all" data-cat="all" aria-pressed="${cat==="all"}"><i></i>ทุกหมวด <em>${live.length}</em></button>`+
     cats.map(c=>`<button type="button" class="chip ${c.cls}" data-cat="${esc(c.key)}" aria-pressed="${cat===c.key}"><i></i>${esc(c.name)} <em>${live.filter(it=>it.ck===c.key).length}</em></button>`).join("");
@@ -553,7 +606,7 @@ function render(){
   $("#rows").innerHTML=html||`<tr><td colspan="${cols}" class="empty">ไม่พบรายการที่ตรงกับการค้นหา ลองพิมพ์คำอื่น หรือกด “ทุกหมวด”</td></tr>`;
   $("#count").textContent=`แสดง ${vis.filter(it=>!it._del).length} จาก ${live.length} รายการ`;
   fillLists(live);
-  if(editing) fillCatSelect();
+  if(editing){ fillCatSelect(); fillFormOpts(); }
 }
 
 /* ---------- toolbar, sign-in ---------- */
@@ -617,21 +670,31 @@ function setField(id,f,v){
   else{ const e=draft.e[id]||(draft.e[id]={o:snap(o),v:{}}); e.v[f]=v; }
 }
 $("#rows").addEventListener("input",e=>{
-  const el=e.target.closest(".cell"); if(!el) return;
+  const el=e.target.closest(".cell"); if(!el||el.dataset.optinput!==undefined) return;
   const tr=el.closest("tr[data-id]"); if(!tr) return;
   const id=tr.dataset.id, f=el.dataset.f;
+  if(el.dataset.opt&&(el.value==="__add"||el.value==="__rename")){ openOptEditor(el,el.value==="__add"?"add":"rename"); return; }
   setField(id,f,el.value);
   if(invalid.delete(id+":"+f)) el.classList.remove("invalid");
   const o=items.find(x=>x.id===id); if(o) el.classList.toggle("dirty",el.value!==str(o[f]));
   store.set(DRAFT_KEY,draft); setMsg(""); updateTools();
 });
 $("#rows").addEventListener("keydown",e=>{
+  const oi=e.target.closest("[data-optinput]");
+  if(oi){
+    if(e.key==="Enter"){ e.preventDefault(); confirmOpt(oi.closest("td")); }
+    else if(e.key==="Escape"){ e.preventDefault(); closeOptEditor(oi.closest("td")); }
+    return;
+  }
   const el=e.target.closest("input.cell"); if(!el||e.key!=="Enter") return;
   e.preventDefault();
   const all=[...document.querySelectorAll(`#rows input.cell[data-f="${el.dataset.f}"]:not(:disabled)`)];
   const next=all[all.indexOf(el)+(e.shiftKey?-1:1)]; if(next){ next.focus(); next.select(); }
 });
 $("#rows").addEventListener("click",e=>{
+  const ok=e.target.closest("[data-optok]"), cancel=e.target.closest("[data-optcancel]");
+  if(ok){ confirmOpt(ok.closest("td")); return; }
+  if(cancel){ closeOptEditor(cancel.closest("td")); return; }
   const del=e.target.closest("[data-del]"), und=e.target.closest("[data-undel]");
   if(del){
     const id=del.dataset.del, i=draft.a.findIndex(x=>x.id===id);
@@ -651,9 +714,27 @@ function fillCatSelect(){
   if([...sel.options].some(o=>o.value===keep)) sel.value=keep;
 }
 $("#a-type").innerHTML='<option value="">เลือกประเภท</option>'+TYPES.map(o=>`<option value="${esc(o.v)}">${esc(o.v)}</option>`).join("");
+function fillFormOpts(){
+  for(const f of ["unit","sup"]){
+    const sel=$("#a-"+f), keep=sel.value;
+    sel.innerHTML=`<option value="">${f==="unit"?"เลือกหน่วย":"เลือกผู้ส่ง"}</option>`+OPTS[f].map(o=>`<option value="${esc(o)}">${esc(o)}</option>`).join("")+'<option value="__add">+ เพิ่มใหม่…</option>';
+    if(keep&&[...sel.options].some(o=>o.value===keep)) sel.value=keep;
+  }
+}
+function comboVal(f){ const n=$("#a-"+f+"-new"); return (n.hidden?$("#a-"+f).value:n.value).trim(); }
+function comboReset(f){ const n=$("#a-"+f+"-new"), s=$("#a-"+f); n.value=""; n.hidden=true; s.hidden=false; s.value=""; }
+$("#addForm").addEventListener("change",e=>{
+  const s=e.target.closest("select[data-combo]");
+  if(s&&s.value==="__add"){ const n=$("#a-"+s.dataset.combo+"-new"); s.hidden=true; n.hidden=false; n.value=""; n.focus(); }
+});
+$("#addForm").addEventListener("keydown",e=>{
+  const n=e.target.closest("input[id$='-new']");
+  if(n&&e.key==="Escape"){ e.preventDefault(); const f=n.id.replace(/^a-|-new$/g,""); comboReset(f); $("#a-"+f).focus(); }
+});
 function addMsg(text,kind){ const el=$("#addMsg"); el.textContent=text||""; el.className="formmsg"+(kind?" "+kind:""); }
 function resetAddForm(){
-  ["a-kind","a-code","a-item","a-unit","a-qty","a-sup"].forEach(k=>{ $("#"+k).value=""; });
+  ["a-kind","a-code","a-item","a-qty"].forEach(k=>{ $("#"+k).value=""; });
+  comboReset("unit"); comboReset("sup");
   $("#a-type").value=""; fillCatSelect(); $("#a-cat").value="";
   document.querySelectorAll("#addForm .invalid").forEach(el=>el.classList.remove("invalid"));
   addMsg("");
@@ -670,10 +751,14 @@ $("#addForm").addEventListener("submit",e=>{
   if(!num(qty).ok){ errs.push("จำนวนต้องเป็นตัวเลข"); $("#a-qty").classList.add("invalid"); }
   if(errs.length){ addMsg("ยังเพิ่มไม่ได้: "+errs.join(" · "),"warn"); const f=document.querySelector("#addForm .invalid"); if(f) f.focus(); return; }
   const id="n"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-  draft.a.push({id,cat:c,kind:v("a-kind").trim(),code:v("a-code").trim(),item,unit:v("a-unit").trim(),qty,sup:v("a-sup").trim(),type:v("a-type")});
+  const unitV=comboVal("unit"), supV=comboVal("sup");
+  for(const [f,val] of [["unit",unitV],["sup",supV]]) if(val&&!OPTS[f].includes(val)&&!extraOpts[f].includes(val)) extraOpts[f].push(val);
+  draft.a.push({id,cat:c,kind:v("a-kind").trim(),code:v("a-code").trim(),item,unit:unitV,qty,sup:supV,type:v("a-type")});
   store.set(DRAFT_KEY,draft);
-  ["a-code","a-item","a-unit","a-qty","a-sup"].forEach(k=>{ $("#"+k).value=""; }); $("#a-type").value="";
+  ["a-code","a-item","a-qty"].forEach(k=>{ $("#"+k).value=""; }); $("#a-type").value="";
+  comboReset("unit"); comboReset("sup");
   render(); updateTools();
+  if(supV) $("#a-sup").value=supV;   /* keep the supplier for the next item */
   const kd=v("a-kind").trim();
   addMsg(`เพิ่ม “${item}” ในหมวด ${c}${kd?` ชนิด ${kd}`:""} แล้ว · อย่าลืมกดบันทึก`,"ok");
   $("#a-code").focus();
