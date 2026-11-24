@@ -378,6 +378,39 @@ tr.item.deleted .cell:disabled{text-decoration:line-through;opacity:1}
   .logos img{width:38px;height:38px;border-radius:8px}
   .pagehead h2{font-size:21px}
 }
+
+/* pr.html: only the purchase request part, for branches (mostly on phones) */
+.pr-only .tabs{display:none}
+.pr-only .nav .wrap{min-height:46px}
+.pr-only #page-pr .pagehead h2{display:none}
+.pr-only #prSub{font-size:17px;font-weight:600;color:var(--ink);margin:0}
+.pr-only #loginPanel:not([hidden]) ~ #page-pr #prGate{display:none}
+
+/* PR form and PR cards on phones */
+.pickrow .nm{min-width:0;overflow-wrap:anywhere}
+@media (max-width:560px){
+  #prCats{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding:2px}
+  #prCats .chip{flex:none}
+  .pickrow{grid-template-columns:minmax(0,1fr) auto;gap:6px 10px}
+  .pickrow .nm{grid-column:1/-1}
+  .pickrow .have{grid-column:1;white-space:normal}
+  .pickrow .qtybox{grid-column:2}
+  .cartlines thead,.prlines thead{display:none}
+  .cartlines,.cartlines tbody,.prlines,.prlines tbody{display:block}
+  .cartlines tr,.prlines tr{display:grid;padding:10px 12px;border-bottom:1px solid var(--line)}
+  .cartlines tr:last-child,.prlines tr:last-child{border-bottom:0}
+  .cartlines td,.prlines td{display:block;padding:0;border:0}
+  .cartlines tr{grid-template-columns:84px minmax(0,1fr) auto;grid-template-areas:"nm nm nm" "q nt rm";gap:6px 8px;align-items:center}
+  .cartlines .nm{grid-area:nm} .cartlines .q{grid-area:q} .cartlines .nt{grid-area:nt} .cartlines .rm{grid-area:rm}
+  .prlines tr{grid-template-columns:auto auto minmax(0,1fr);grid-template-areas:"nm nm nm" "q u nt" "res res res";gap:2px 5px;align-items:baseline}
+  .prlines .nm{grid-area:nm;font-weight:600}
+  .prlines .q{grid-area:q;text-align:left}
+  .prlines .q::before{content:"ขอ ";color:var(--muted);font-weight:400}
+  .prlines .u{grid-area:u}
+  .prlines .nt{grid-area:nt}
+  .prlines .nt:not(:empty)::before{content:"· "}
+  .prlines .res{grid-area:res;margin-top:4px}
+}
 </style>
 </head>
 <body>
@@ -737,6 +770,7 @@ const FIELDS=["kind","code","item","unit","sup","type"];              /* text co
 const ROWKEYS=["cat","kind","code","item","unit","sup","type"];
 const LABEL={kind:"ชนิดสินค้า",code:"รหัสเลขที่",item:"รายละเอียดสินค้า",unit:"หน่วยนับ",sup:"ผู้ส่งสินค้า",type:"ประเภทสินค้า"};
 const REFRESH_MS=5*60*1000;
+const PR_ONLY=!!window.PR_ONLY;            /* pr.html: a page for branches with only the purchase request (PR) part */
 const TH_MONTHS=["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
 
 /* ---------- helpers ---------- */
@@ -825,7 +859,7 @@ async function call(action,data){
 let afterLogin=null;
 function askLogin(hint,then){
   afterLogin=then||null;
-  $("#loginHint").textContent=hint||"ใส่รหัสของสาขา หรือรหัสฝ่ายจัดซื้อ · คนที่ไม่มีรหัสดูตารางสต็อกได้อย่างเดียว";
+  $("#loginHint").textContent=hint||(PR_ONLY?"ใส่รหัสของสาขา เพื่อเปิดใบขอซื้อและดูสถานะใบที่เปิดไว้":"ใส่รหัสของสาขา หรือรหัสฝ่ายจัดซื้อ · คนที่ไม่มีรหัสดูตารางสต็อกได้อย่างเดียว");
   $("#loginPanel").hidden=false; $("#loginMsg").textContent=""; $("#pwInput").value="";
   window.scrollTo({top:0}); $("#pwInput").focus();
 }
@@ -878,7 +912,7 @@ async function restoreSession(){
 }
 async function updateBadges(){
   const pr=$("#bdgPR"), rc=$("#bdgRC");
-  if(!me||legacy){ pr.hidden=rc.hidden=true; return; }
+  if(!me||legacy||PR_ONLY){ pr.hidden=rc.hidden=true; return; }
   if(isAdmin()){
     const j=await call("pr_list",{status:"wait"});
     const n=j.ok?j.docs.length:0; pr.textContent=n; pr.hidden=!n; pr.title=n?`รออนุมัติ ${n} ใบ`:"";
@@ -897,7 +931,7 @@ function route(){
   try{ h=decodeURIComponent(h); }catch(e){}
   document.title=TITLE;
   const i=h.indexOf("/"), page=(i<0?h:h.slice(0,i))||"stock", arg=i<0?"":h.slice(i+1);
-  const p=PAGES[page]?page:"stock";
+  const p=PR_ONLY?"pr":(PAGES[page]?page:"stock");
   currentPage=p;
   document.querySelectorAll(".page").forEach(el=>{ el.hidden=el.id!=="page-"+p; });
   document.querySelectorAll(".tabs a").forEach(a=>{ if(a.dataset.page===p) a.setAttribute("aria-current","page"); else a.removeAttribute("aria-current"); });
@@ -1167,6 +1201,7 @@ function fillLists(list){
   fill("dl-unit","unit"); fill("dl-sup","sup"); fill("dl-kind","kind");
 }
 function render(){
+  if(PR_ONLY) return;                    /* pr.html has no stock table */
   const admin=isAdmin();
   document.body.classList.toggle("editing",editing);
   $("#thAct").hidden=!(editing&&admin);
@@ -1502,7 +1537,7 @@ function remapDraft(){
   return lost;
 }
 function maybeRestore(){
-  if(editing||!me||!canEditTable()) return;
+  if(PR_ONLY||editing||!me||!canEditTable()) return;
   const d=store.get(DRAFT_KEY);
   if(!d||typeof d!=="object"||d.owner!==ownerKey()) return;
   draft={e:d.e&&typeof d.e==="object"?d.e:{},a:Array.isArray(d.a)?d.a:[],d:Array.isArray(d.d)?d.d:[]};
@@ -1531,8 +1566,9 @@ $("#btnReload").addEventListener("click",async()=>{
 /* ======================================================================
    ใบขอซื้อ (PR)
    ====================================================================== */
-let prDocs=[], prFilter="wait", prCat="all", prBusy=false;
+let prDocs=[], prFilter="wait", prCat="all", prBusy=false, prPicked=false, prLoadedAt=0, booted=false;
 const decideState={};
+const poHref=no=>(PR_ONLY?"./":"")+"#po/"+encodeURIComponent(no);   /* pr.html opens POs on the main page */
 let prCart=(c=>c&&typeof c==="object"&&c.lines&&typeof c.lines==="object"?c:{lines:{}})(store.get(CART_KEY));
 const saveCart=()=>store.set(CART_KEY,prCart);
 function branchOptions(sel,withAll,allLabel){
@@ -1542,18 +1578,25 @@ function branchOptions(sel,withAll,allLabel){
 }
 async function enterPR(){
   const gate=!me||legacy;
-  $("#prGate").hidden=!gate||legacy; $("#btnNewPR").hidden=gate; $("#prBar").hidden=gate;
-  if(gate){ $("#prList").innerHTML=""; $("#prForm").hidden=true; say("#prListMsg",""); return; }
+  const starting=PR_ONLY&&!booted;       /* pr.html: wait for a remembered sign-in before asking */
+  $("#prGate").hidden=!gate||legacy||starting; $("#btnNewPR").hidden=gate; $("#prBar").hidden=gate;
+  if(gate){
+    $("#prList").innerHTML=""; $("#prForm").hidden=true; $("#prSub").textContent="";
+    say("#prListMsg",starting?"กำลังโหลด…":"");
+    if(PR_ONLY&&!starting&&!legacy&&$("#loginPanel").hidden) askLogin();
+    return;
+  }
+  if(PR_ONLY&&isBranch()&&!prPicked) prFilter="all";
   $("#prSub").textContent=isAdmin()?"ใบขอซื้อจากทุกสาขา · กด “พิจารณา / ออก PO” เพื่ออนุมัติและออกใบสั่งซื้อให้ผู้ขาย":`ใบขอซื้อของสาขา ${me.branch.name}`;
   $("#prBranchFilter").hidden=!isAdmin();
   if(isAdmin()) branchOptions($("#prBranchFilter"),true);
   await loadPR();
 }
-async function loadPR(){
-  say("#prListMsg","กำลังโหลดใบขอซื้อ…");
+async function loadPR(quiet){
+  if(!quiet) say("#prListMsg","กำลังโหลดใบขอซื้อ…");
   const j=await call("pr_list",{});
-  if(!j.ok){ say("#prListMsg",errText(j),"warn"); return; }
-  prDocs=j.docs||[]; say("#prListMsg","");
+  if(!j.ok){ if(!quiet) say("#prListMsg",errText(j),"warn"); return; }
+  prDocs=j.docs||[]; prLoadedAt=Date.now(); if(!quiet) say("#prListMsg","");
   renderPRList();
   if(isAdmin()){ const n=prDocs.filter(d=>d.status==="รออนุมัติ").length, b=$("#bdgPR"); b.textContent=n; b.hidden=!n; }
 }
@@ -1569,7 +1612,7 @@ function renderPRList(){
   for(const no of Object.keys(decideState)) if(list.some(d=>d.no===no)) renderDecide(no);
 }
 function lineResult(l){
-  if(l.status==="อนุมัติ") return `<span class="pill p-ok">อนุมัติ ${fmt(l.qtyOk)}</span>${l.po?` <a href="#po/${encodeURIComponent(l.po)}" class="muted">${esc(l.po)}</a>`:""}`;
+  if(l.status==="อนุมัติ") return `<span class="pill p-ok">อนุมัติ ${fmt(l.qtyOk)}</span>${l.po?` <a href="${poHref(l.po)}" class="muted">${esc(l.po)}</a>`:""}`;
   if(l.status==="ไม่อนุมัติ") return `<span class="pill p-out">ไม่อนุมัติ</span>${l.adminNote?` <span class="muted">${esc(l.adminNote)}</span>`:""}`;
   return `<span class="pill ${PR_CLS[l.status]||"p-none"}">${esc(l.status)}</span>`;
 }
@@ -1579,9 +1622,9 @@ function prCard(d){
   return `<article class="doc${decideState[d.no]?" open-doc":""}" data-pr="${esc(d.no)}">
     <div class="dochead"><span class="no">${esc(d.no)}</span><span class="pill ${PR_CLS[d.status]||"p-none"}">${esc(d.status)}</span>
       <span class="meta">${thDate(d.date,true)} · ${esc(d.branchName)}${d.by?` · ผู้ขอ ${esc(d.by)}`:""}${d.needBy?` · ต้องการภายใน ${thDate(d.needBy)}`:""}</span>
-      <span class="right">${(d.pos||[]).map(p=>`<a class="btn small ghost" href="#po/${encodeURIComponent(p)}">${esc(p)}</a>`).join("")}</span></div>
-    <div class="linesbox"><table class="lines"><thead><tr><th>สินค้า</th><th class="r">ขอ</th><th>หน่วย</th><th>หมายเหตุ</th><th>ผล</th></tr></thead><tbody>
-      ${d.lines.map(l=>`<tr><td>${esc(l.item)}</td><td class="r">${fmt(l.qty)}</td><td>${esc(l.unit)}</td><td class="muted">${esc(l.note)}</td><td>${lineResult(l)}</td></tr>`).join("")}
+      <span class="right">${(d.pos||[]).map(p=>`<a class="btn small ghost" href="${poHref(p)}">${esc(p)}</a>`).join("")}</span></div>
+    <div class="linesbox"><table class="lines prlines"><thead><tr><th>สินค้า</th><th class="r">ขอ</th><th>หน่วย</th><th>หมายเหตุ</th><th>ผล</th></tr></thead><tbody>
+      ${d.lines.map(l=>`<tr><td class="nm">${esc(l.item)}</td><td class="r q">${fmt(l.qty)}</td><td class="u">${esc(l.unit)}</td><td class="muted nt">${esc(l.note)}</td><td class="res">${lineResult(l)}</td></tr>`).join("")}
     </tbody></table></div>
     ${pending&&(isAdmin()||canCancel)?`<div class="docactions">${isAdmin()?`<button type="button" class="btn primary small" data-decide="${esc(d.no)}">พิจารณา / ออก PO</button>`:""}${canCancel?`<button type="button" class="btn small danger" data-prcancel="${esc(d.no)}">ยกเลิกใบขอซื้อ</button>`:""}</div>`:""}
     <div class="decide" data-box="${esc(d.no)}" hidden></div>
@@ -1591,7 +1634,7 @@ $("#prQList").addEventListener("input",renderPRList);
 $("#prBranchFilter").addEventListener("change",renderPRList);
 $("#page-pr").addEventListener("click",async e=>{
   const f=e.target.closest("[data-prf]");
-  if(f){ prFilter=f.dataset.prf; renderPRList(); return; }
+  if(f){ prFilter=f.dataset.prf; prPicked=true; renderPRList(); return; }
   const c=e.target.closest("[data-prcancel]");
   if(c){
     if(!armed(c,"กดอีกครั้งเพื่อยืนยันยกเลิก")) return;
@@ -1759,11 +1802,11 @@ function renderCart(){
   const rows=Object.entries(prCart.lines).filter(([sid])=>byId.has(sid));
   const n=rows.filter(([,l])=>num(l.qty).v>0).length;
   $("#prCount").textContent=n?`${n} รายการ`:"ยังไม่ได้เลือก ใส่จำนวนที่รายการด้านบน";
-  $("#prCart").innerHTML=rows.length?`<div class="linesbox"><table class="lines"><thead><tr><th>สินค้า</th><th>จำนวน</th><th>หมายเหตุ</th><th></th></tr></thead><tbody>`+
-    rows.map(([sid,l])=>{ const it=byId.get(sid); return `<tr data-cid="${esc(sid)}"><td>${esc(it.item)}<div class="muted">${esc(it.unit)}</div></td>
-      <td><input class="cell num" data-cq value="${esc(l.qty)}" inputmode="decimal" style="width:80px" aria-label="จำนวน ${esc(it.item)}"></td>
-      <td><input class="cell" data-cn value="${esc(l.note||"")}" placeholder="เช่น ด่วน, ยี่ห้อเดิม" aria-label="หมายเหตุ ${esc(it.item)}"></td>
-      <td class="r"><button type="button" class="rowbtn del" data-crm aria-label="เอาออก ${esc(it.item)}">เอาออก</button></td></tr>`; }).join("")+"</tbody></table></div>":"";
+  $("#prCart").innerHTML=rows.length?`<div class="linesbox"><table class="lines cartlines"><thead><tr><th>สินค้า</th><th>จำนวน</th><th>หมายเหตุ</th><th></th></tr></thead><tbody>`+
+    rows.map(([sid,l])=>{ const it=byId.get(sid); return `<tr data-cid="${esc(sid)}"><td class="nm">${esc(it.item)}<div class="muted">${esc(it.unit)}</div></td>
+      <td class="q"><input class="cell num" data-cq value="${esc(l.qty)}" inputmode="decimal" style="width:80px" aria-label="จำนวน ${esc(it.item)}"></td>
+      <td class="nt"><input class="cell" data-cn value="${esc(l.note||"")}" placeholder="เช่น ด่วน, ยี่ห้อเดิม" aria-label="หมายเหตุ ${esc(it.item)}"></td>
+      <td class="r rm"><button type="button" class="rowbtn del" data-crm aria-label="เอาออก ${esc(it.item)}">เอาออก</button></td></tr>`; }).join("")+"</tbody></table></div>":"";
 }
 $("#prQ").addEventListener("input",renderPick);
 $("#prBranch").addEventListener("change",()=>{ prCart.branch=$("#prBranch").value; saveCart(); renderPick(); });
@@ -1806,7 +1849,7 @@ $("#btnPRSend").addEventListener("click",async()=>{
   if(!j.ok){ say("#prMsg",errText(j),"warn"); return; }
   if(by) store.set(NAME_KEY,by);
   prCart={lines:{}}; saveCart(); $("#prNeed").value="";
-  closePRForm(); prFilter="wait";
+  closePRForm(); if(!PR_ONLY) prFilter="wait";
   await loadPR();
   say("#prListMsg",`ส่งใบขอซื้อ ${j.no} แล้ว (${lines.length} รายการ) · รอฝ่ายจัดซื้ออนุมัติ`,"ok");
   updateBadges();
@@ -2076,15 +2119,33 @@ $("#hQ").addEventListener("input",renderHistory);
    start
    ====================================================================== */
 (async function init(){
+  if(PR_ONLY){
+    /* the PR list does not need the item list, so sign in and show it while the items load */
+    updateWho(); route();
+    const loading=load();
+    await restoreSession();
+    booted=true; route();
+    await loading;
+    return;
+  }
   const po=new URLSearchParams(location.search).get("po");
   if(po) history.replaceState(null,"",location.pathname+"#receive/"+encodeURIComponent(po));
   updateWho(); route();
   await load();
   await restoreSession();
+  booted=true;
   route();
 })();
+/* pr.html: refresh the statuses quietly when the page comes back into view */
+function refreshPRQuiet(){
+  if(!PR_ONLY||!me||legacy||prBusy||document.visibilityState!=="visible") return;
+  if(Object.keys(decideState).length||Date.now()-prLoadedAt<30000) return;
+  loadPR(true);
+}
+document.addEventListener("visibilitychange",refreshPRQuiet);
 setInterval(()=>{
   if(document.visibilityState!=="visible") return;
+  if(PR_ONLY){ refreshPRQuiet(); return; }
   if(!editing&&!saving&&(API_URL||CSV_URL)&&currentPage==="stock") load();
   updateBadges();
 },REFRESH_MS);
