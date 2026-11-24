@@ -391,6 +391,7 @@ tr.item.deleted .cell:disabled{text-decoration:line-through;opacity:1}
 /* PR form and PR cards on phones */
 .pickrow .nm{min-width:0;overflow-wrap:anywhere}
 @media (max-width:560px){
+  .prtop .f-date{flex:1 1 130px}
   #prCats{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding:2px}
   #prCats .chip{flex:none}
   .pickrow{grid-template-columns:minmax(0,1fr) auto;gap:6px 10px}
@@ -413,6 +414,11 @@ tr.item.deleted .cell:disabled{text-decoration:line-through;opacity:1}
   .prlines .nt:not(:empty)::before{content:"· "}
   .prlines .res{grid-area:res;margin-top:4px}
 }
+
+/* decision: totals under the lines */
+.decide .lines tfoot td{border-bottom:0;padding:3px 8px;font-size:14px;color:var(--muted)}
+.decide .lines tfoot tr:first-child td{border-top:1px solid var(--line);padding-top:8px}
+.decide .lines tfoot tr.grand td{color:var(--ink);font-weight:700;font-size:15px;padding-bottom:8px}
 </style>
 </head>
 <body class="pr-only">
@@ -543,6 +549,7 @@ tr.item.deleted .cell:disabled{text-decoration:line-through;opacity:1}
         <div class="prtop">
           <label class="f-branch"><span>สาขาที่ขอ *</span><select id="prBranch" class="cell"></select></label>
           <label class="f-by"><span>ชื่อผู้ขอ</span><input id="prBy" class="cell" autocomplete="name" placeholder="ชื่อเล่นหรือชื่อจริง"></label>
+          <label class="f-date"><span>วันที่สั่งซื้อ</span><input id="prDate" class="cell" type="date"></label>
           <label class="f-date"><span>ต้องการภายในวันที่</span><input id="prNeed" class="cell" type="date"></label>
         </div>
         <input id="prQ" class="cell" type="search" placeholder="ค้นหาสินค้าที่จะขอ เช่น โกโก้, แก้ว 16 oz, MAKRO" aria-label="ค้นหาสินค้าที่จะขอ">
@@ -761,7 +768,7 @@ const ERR={
   bad_price:"ราคาต้องเป็นตัวเลข", no_supplier:"ยังไม่ได้ใส่ผู้ขาย", no_branch:"ไม่พบสาขานี้ในชีต สาขา",
   conflict:"มีคนแก้ข้อมูลระหว่างนี้", old_page:"หน้าเว็บเป็นเวอร์ชันเก่า กด Ctrl+F5 แล้วลองใหม่",
   setup_needed:"ยังไม่ได้เรียกใช้ setupV2 ใน Apps Script", photo_too_big:"รูปใหญ่เกินไป", too_many:"รายการเยอะเกินไป",
-  item_not_found:"มีสินค้าที่ถูกลบออกจากตารางไปแล้ว", no_stock_column:"ยังไม่มีคอลัมน์สต็อกของสาขานี้", bad_request:"คำขอไม่ถูกต้อง"
+  item_not_found:"มีสินค้าที่ถูกลบออกจากตารางไปแล้ว", bad_date:"วันที่สั่งซื้อไม่ถูกต้อง เลือกได้ถึงวันนี้", no_stock_column:"ยังไม่มีคอลัมน์สต็อกของสาขานี้", bad_request:"คำขอไม่ถูกต้อง"
 };
 const CSV_URL=String(window.SHEET_CSV_URL||"").trim();
 const API_URL=String(window.SHEET_API_URL||"").trim();
@@ -815,7 +822,7 @@ function armed(btn,label){ /* two-step confirm on one button: returns true on th
 }
 
 /* ---------- state ---------- */
-let items=null, version=null, source="", transport="direct", legacy=false;
+let items=null, version=null, source="", transport="direct", legacy=false, apiRev=0;   /* apiRev 3+: PR order date can be chosen */
 let branchList=[], stockCodes=[];
 let view=store.raw(VIEW_KEY);            /* "" = total of all branches, else a branch code */
 let me=null;                             /* who is signed in: {role, branch, branches, settings, suppliers} */
@@ -981,7 +988,7 @@ function parseCSV(text){
 const HEADS=[["type","ประเภท"],["kind","ชนิด"],["cat","หมวด"],["code","รหัส"],["item","รายละเอียด"],["unit","หน่วย"],["qty","จำนวน"],["qty","คงเหลือ"],["sup","ผู้ส่ง"],["sup","supplier"]];
 function mapHeader(row){
   const m={};
-  row.forEach((h,i)=>{ const t=str(h).trim().toLowerCase(); if(!t||/^สต็อก\s/.test(t)||t==="id") return;
+  row.forEach((h,i)=>{ const t=str(h).trim().toLowerCase(); if(!t||/^สต็อก\s/.test(t)||t==="id"||t.includes("ราคา")) return;
     for(const [k,kw] of HEADS){ if(!(k in m)&&t.includes(kw)){ m[k]=i; break; } } });
   return m;
 }
@@ -1009,7 +1016,7 @@ function setItems(rows,ver,src){
   version=ver||null; source=src;
 }
 function useApi(j){
-  legacy=j.schema!==2;
+  legacy=j.schema!==2; apiRev=Number(j.rev)||0;
   if(Array.isArray(j.branches)) branchList=j.branches;
   if(Array.isArray(j.stockCodes)) stockCodes=j.stockCodes;
   setItems(j.rows||[],j.version,"api");
@@ -1624,7 +1631,7 @@ function prCard(d){
   const canCancel=pending&&(isAdmin()||d.branch===myCode());
   return `<article class="doc${decideState[d.no]?" open-doc":""}" data-pr="${esc(d.no)}">
     <div class="dochead"><span class="no">${esc(d.no)}</span><span class="pill ${PR_CLS[d.status]||"p-none"}">${esc(d.status)}</span>
-      <span class="meta">${thDate(d.date,true)} · ${esc(d.branchName)}${d.by?` · ผู้ขอ ${esc(d.by)}`:""}${d.needBy?` · ต้องการภายใน ${thDate(d.needBy)}`:""}</span>
+      <span class="meta">สั่งซื้อ ${thDate(d.date,true)} · ${esc(d.branchName)}${d.by?` · ผู้ขอ ${esc(d.by)}`:""}${d.needBy?` · ต้องการภายใน ${thDate(d.needBy)}`:""}</span>
       <span class="right">${(d.pos||[]).map(p=>`<a class="btn small ghost" href="${poHref(p)}">${esc(p)}</a>`).join("")}</span></div>
     <div class="linesbox"><table class="lines prlines"><thead><tr><th>สินค้า</th><th class="r">ขอ</th><th>หน่วย</th><th>หมายเหตุ</th><th>ผล</th></tr></thead><tbody>
       ${d.lines.map(l=>`<tr><td class="nm">${esc(l.item)}</td><td class="r q">${fmt(l.qty)}</td><td class="u">${esc(l.unit)}</td><td class="muted nt">${esc(l.note)}</td><td class="res">${lineResult(l)}</td></tr>`).join("")}
@@ -1660,14 +1667,15 @@ async function openDecide(no){
   decideState[no]={loading:true};
   renderPRList();
   const j=await call("prices",{ids:[...new Set(d.lines.map(l=>l.itemId))]});
-  const prices=j.ok?j.prices:{};
+  const prices=j.ok?j.prices:{}, list=j.ok&&j.list?j.list:{};
   const byId=new Map((items||[]).map(it=>[it.sid,it]));
   decideState[no]={
     lines:d.lines.map(l=>{
       const it=byId.get(l.itemId), hist=prices[l.itemId]||[];
-      const sup=(it&&it.sup)||(hist[0]&&hist[0].sup)||"";
-      const p=hist.find(x=>x.sup===sup);
-      return {line:l.line,item:l.item,unit:l.unit,asked:l.qty,ok:true,qty:fmt(l.qty),sup,price:p?fmt(p.price):"",hist};
+      const defSup=(it&&it.sup)||"", sup=defSup||(hist[0]&&hist[0].sup)||"";
+      const x={line:l.line,item:l.item,unit:l.unit,asked:l.qty,ok:true,qty:fmt(l.qty),sup,defSup,list:Number(list[l.itemId])||0,hist,price:"",autoPrice:true};
+      const a=autoPrice(x); x.price=a?fmt(a.price):"";
+      return x;
     }),
     vat:fmt((me.settings&&me.settings.vat)||0), due:"", note:"", reason:""
   };
@@ -1675,6 +1683,25 @@ async function openDecide(no){
   $("#dl-vendor").innerHTML=[...vendors].sort((a,b)=>a.localeCompare(b,"th")).map(v=>`<option value="${esc(v)}"></option>`).join("");
   renderPRList();
   const box=document.querySelector(`[data-box="${CSS.escape(no)}"]`); if(box) box.scrollIntoView({block:"nearest"});
+}
+const sameSup=(a,b)=>str(a).trim().toLowerCase()===str(b).trim().toLowerCase();
+/* price for the chosen supplier: the price list (ชีต ราคาสินค้า) when it is the item's usual supplier, else the last PO price */
+function autoPrice(l){
+  if(l.list>0&&(!l.defSup||sameSup(l.defSup,l.sup))) return {price:l.list,src:"list"};
+  const h=l.hist.find(x=>sameSup(x.sup,l.sup));
+  return h?{price:h.price,src:"po",date:h.date}:null;
+}
+function priceHint(l){
+  const a=autoPrice(l);
+  if(a) return a.src==="list"?`ราคาตั้งไว้ ${money(a.price)}`:`ล่าสุด ${money(a.price)} (${thDate(a.date)})`;
+  return !l.defSup||sameSup(l.defSup,l.sup)?"ยังไม่มีราคา · ใส่ครั้งเดียว ครั้งหน้าระบบเติมให้":"ยังไม่มีราคาของผู้ขายนี้";
+}
+function sumHTML(s){
+  let sub=0;
+  for(const l of s.lines) if(l.ok) sub+=(num(l.qty).v||0)*(num(l.price).v||0);
+  const vat=num(s.vat).v||0, v=Math.round(sub*vat)/100;
+  return (vat?`<tr><td colspan="6" class="r">รวมเป็นเงิน</td><td class="r">${money(sub)}</td></tr><tr><td colspan="6" class="r">VAT ${fmt(vat)}%</td><td class="r">${money(v)}</td></tr>`:"")+
+    `<tr class="grand"><td colspan="6" class="r">รวมทั้งสิ้น (บาท)</td><td class="r">${money(sub+v)}</td></tr>`;
 }
 function decideTotals(s){
   const groups=new Map(); let blank=0;
@@ -1699,15 +1726,15 @@ function renderDecide(no){
   if(s.loading){ box.innerHTML='<p class="msgline">กำลังโหลดราคาล่าสุด…</p>'; return; }
   box.innerHTML=`<h3>พิจารณาและออกใบสั่งซื้อ</h3>
     <div class="linesbox"><table class="lines"><thead><tr><th>อนุมัติ</th><th>สินค้า</th><th class="r">ขอ</th><th>สั่ง</th><th>ผู้ขาย</th><th>ราคา/หน่วย</th><th class="r">รวม</th></tr></thead><tbody>
-    ${s.lines.map(l=>{ const amt=(num(l.qty).v||0)*(num(l.price).v||0), last=l.hist.find(x=>x.sup===l.sup.trim());
+    ${s.lines.map(l=>{ const amt=(num(l.qty).v||0)*(num(l.price).v||0);
       return `<tr class="${l.ok?"":"off"}" data-dl="${l.line}">
       <td class="chk"><input type="checkbox" class="big" data-k="ok"${l.ok?" checked":""} aria-label="อนุมัติ ${esc(l.item)}"></td>
       <td>${esc(l.item)}<div class="muted">${esc(l.unit)}</div></td><td class="r">${fmt(l.asked)}</td>
       <td><input class="cell num" data-k="qty" value="${esc(l.qty)}" inputmode="decimal" style="width:80px" aria-label="จำนวนสั่ง ${esc(l.item)}"></td>
       <td><input class="cell" data-k="sup" value="${esc(l.sup)}" list="dl-vendor" style="min-width:150px" aria-label="ผู้ขาย ${esc(l.item)}"></td>
-      <td><input class="cell num" data-k="price" value="${esc(l.price)}" inputmode="decimal" style="width:100px" placeholder="0.00" aria-label="ราคาต่อหน่วย ${esc(l.item)}">${last?`<span class="hintprice">ล่าสุด ${money(last.price)} (${thDate(last.date)})</span>`:""}</td>
+      <td><input class="cell num" data-k="price" value="${esc(l.price)}" inputmode="decimal" style="width:100px" placeholder="0.00" aria-label="ราคาต่อหน่วย ${esc(l.item)}"><span class="hintprice" data-hint>${esc(priceHint(l))}</span></td>
       <td class="r" data-amt>${l.ok?money(amt):"–"}</td></tr>`; }).join("")}
-    </tbody></table></div>
+    </tbody><tfoot data-sum>${sumHTML(s)}</tfoot></table></div>
     <div class="opts">
       <label>VAT (%)<input class="cell num" data-k="vat" value="${esc(s.vat)}" inputmode="decimal" style="width:80px"></label>
       <label>กำหนดส่ง<input class="cell" type="date" data-k="due" value="${esc(s.due)}"></label>
@@ -1731,13 +1758,14 @@ function onDecideInput(e){
     if(k==="ok"){ l.ok=el.checked; tr.classList.toggle("off",!l.ok); }
     else if(k==="sup"){
       l.sup=el.value;
-      const last=l.hist.find(x=>x.sup===l.sup.trim());
-      if(last&&(!l.price.trim()||l.autoPrice)){ l.price=fmt(last.price); l.autoPrice=true; tr.querySelector('[data-k="price"]').value=l.price; }
+      if(!l.price.trim()||l.autoPrice){ const a=autoPrice(l); l.price=a?fmt(a.price):""; l.autoPrice=true; tr.querySelector('[data-k="price"]').value=l.price; }
+      tr.querySelector("[data-hint]").textContent=priceHint(l);
     }
     else { l[k]=el.value; if(k==="price") l.autoPrice=false; }
     tr.querySelector("[data-amt]").textContent=l.ok?money((num(l.qty).v||0)*(num(l.price).v||0)):"–";
   }else s[k]=el.value;
   box.querySelector("[data-preview]").textContent=previewText(s);
+  box.querySelector("[data-sum]").innerHTML=sumHTML(s);
 }
 $("#prList").addEventListener("input",onDecideInput);
 $("#prList").addEventListener("change",onDecideInput);
@@ -1758,7 +1786,7 @@ async function submitDecide(no,approve,btn){
   if(!j.ok) return msg(errText(j));
   delete decideState[no];
   await loadPR();
-  say("#prListMsg",j.pos&&j.pos.length?`อนุมัติ ${no} แล้ว · ออกใบสั่งซื้อ ${j.pos.join(", ")} (กดเลขที่ PO เพื่อพิมพ์ส่งผู้ขาย)`:`บันทึก ไม่อนุมัติ ${no} แล้ว`,"ok");
+  say("#prListMsg",j.pos&&j.pos.length?`อนุมัติ ${no} แล้ว · ออกใบสั่งซื้อ ${j.pos.join(", ")} (กดเลขที่ PO เพื่อพิมพ์ส่งผู้ขาย)${j.learned?` · จำราคาใหม่ในชีต ราคาสินค้า ${j.learned} รายการ`:""}`:`บันทึก ไม่อนุมัติ ${no} แล้ว`,"ok");
   updateBadges();
 }
 
@@ -1773,7 +1801,9 @@ function openPRForm(){
   if(isAdmin()){ branchOptions(sel,true,"เลือกสาขา"); sel.disabled=false; if(prCart.branch) sel.value=prCart.branch; }
   else { sel.innerHTML=`<option value="${esc(me.branch.code)}">${esc(me.branch.name)}</option>`; sel.disabled=true; }
   if(!$("#prBy").value) $("#prBy").value=store.raw(NAME_KEY);
-  $("#prNeed").min=addDays(0); if(prCart.needBy) $("#prNeed").value=prCart.needBy;
+  const today=addDays(0);
+  $("#prDate").max=today; $("#prDate").value=prCart.date&&prCart.date<=today?prCart.date:today;
+  $("#prNeed").min=$("#prDate").value; if(prCart.needBy) $("#prNeed").value=prCart.needBy;
   say("#prMsg",""); renderPick(); renderCart(); $("#prQ").focus();
 }
 const prBranchCode=()=>isAdmin()?$("#prBranch").value:myCode();
@@ -1814,6 +1844,11 @@ function renderCart(){
 $("#prQ").addEventListener("input",renderPick);
 $("#prBranch").addEventListener("change",()=>{ prCart.branch=$("#prBranch").value; saveCart(); renderPick(); });
 $("#prNeed").addEventListener("change",()=>{ prCart.needBy=$("#prNeed").value; saveCart(); });
+$("#prDate").addEventListener("change",()=>{
+  const v=$("#prDate").value, today=addDays(0);
+  prCart.date=v&&v!==today?v:""; saveCart();
+  $("#prNeed").min=v||today;
+});
 $("#prForm").addEventListener("click",e=>{
   const pc=e.target.closest("[data-pc]"); if(pc){ prCat=pc.dataset.pc; renderPick(); return; }
   const stp=e.target.closest("[data-pstep]");
@@ -1845,9 +1880,13 @@ $("#btnPRSend").addEventListener("click",async()=>{
   if(isAdmin()&&!code){ say("#prMsg","เลือกสาขาที่ขอก่อน","warn"); $("#prBranch").focus(); return; }
   if(badQ){ say("#prMsg",`จำนวนของ “${byId.get(badQ[0])?byId.get(badQ[0]).item:""}” ต้องเป็นตัวเลข`,"warn"); return; }
   if(!lines.length){ say("#prMsg","ยังไม่ได้ใส่จำนวนสินค้าที่จะขอ","warn"); $("#prQ").focus(); return; }
+  const today=addDays(0), date=$("#prDate").value, need=$("#prNeed").value;
+  if(date&&date>today){ say("#prMsg","วันที่สั่งซื้อต้องไม่เกินวันนี้","warn"); $("#prDate").focus(); return; }
+  if(date&&date<today&&apiRev<3){ say("#prMsg","ต้องอัปเดตโค้ด Apps Script ก่อน ถึงจะเลือกวันที่สั่งซื้อย้อนหลังได้ (ถ้าสั่งวันนี้ ให้เลือกวันที่เป็นวันนี้)","warn"); $("#prDate").focus(); return; }
+  if(need&&need<(date||today)){ say("#prMsg","วันที่ต้องการต้องไม่ก่อนวันที่สั่งซื้อ","warn"); $("#prNeed").focus(); return; }
   prBusy=true; $("#btnPRSend").disabled=true; say("#prMsg","กำลังส่งใบขอซื้อ…");
   const by=$("#prBy").value.trim();
-  const j=await call("pr_create",{branch:code,by,needBy:$("#prNeed").value,lines});
+  const j=await call("pr_create",{branch:code,by,date,needBy:need,lines});
   prBusy=false; $("#btnPRSend").disabled=false;
   if(!j.ok){ say("#prMsg",errText(j),"warn"); return; }
   if(by) store.set(NAME_KEY,by);
