@@ -515,7 +515,6 @@ tr.item.deleted .cell:disabled{text-decoration:line-through;opacity:1}
     </div>
     <div class="who">
       <a class="btn navlink" id="lnkPR" href="pr.html" hidden><span id="lnkPRText">อนุมัติใบขอซื้อ</span> <span class="badge" id="bdgPRW" hidden></span></a>
-      <a class="btn navlink" id="lnkMain" href="./" hidden>หน้าหลัก</a>
       <span id="whoLabel"></span>
       <button type="button" id="btnLogin" class="btn">เข้าสู่ระบบ</button>
       <button type="button" id="btnLogout" class="btn" hidden>ออกจากระบบ</button>
@@ -981,7 +980,6 @@ function updateWho(){
   document.querySelectorAll(".tabs a").forEach(a=>{ const pg=a.dataset.page; a.hidden=(ONLY&&!ONLY.includes(pg))||(pg==="central"&&!HQ_ONLY&&!canCentral()); });
   $("#lnkPR").hidden=!me||hasPR();
   $("#lnkPRText").textContent=isAdmin()?"อนุมัติใบขอซื้อ":"ขอซื้อ · รับของ";
-  $("#lnkMain").hidden=!isAdmin()||!PR_ONLY;
 }
 function onAuthChanged(){
   updateWho();
