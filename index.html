@@ -344,10 +344,77 @@ input[type=checkbox].big{width:18px;height:18px;accent-color:var(--ink)}
 .posheet .ps-sign div{display:grid;justify-items:center;gap:4px;font-size:12px;color:#444}
 .posheet .ps-sign span{display:block;width:150px;border-bottom:1px dotted #444;height:42px}
 .posheet .stamp{position:absolute;top:40%;left:50%;transform:translate(-50%,-50%) rotate(-18deg);font-family:var(--display);font-size:72px;font-weight:700;color:rgba(185,28,28,.18);border:6px solid rgba(185,28,28,.18);padding:0 24px;border-radius:12px;pointer-events:none}
+/* ใบสั่งซื้อแบบฟอร์มของฝ่ายจัดซื้อ (กรอบเส้นทึบ, Supplier / Bill to / Ship to, ตาราง 10 ช่อง, ผู้ลงนาม 3 ช่อง) */
+.posheet:has(.pof){padding:22px}
+.posheet .pof{border:1.5px solid #222;font-size:12.5px;line-height:1.45;color:#111}
+.posheet .pof dl{margin:0}
+.posheet .pof dd{margin:0}
+.posheet .pof h4{margin:0 0 4px;font-size:13px;font-weight:700;color:#111}
+.posheet .pof-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:12px 16px 4px}
+.posheet .pof-head h2{font-size:25px;font-weight:700;margin:0;color:#111;letter-spacing:.01em}
+.posheet .pof-meta{display:flex;gap:14px;align-items:flex-start}
+.posheet .pof-kv{display:grid;grid-template-columns:auto auto;gap:1px 12px;font-size:12px;align-self:center}
+.posheet .pof-kv dt{color:#333}
+.posheet .pof-kv dd{text-align:right}
+.posheet .pof-qr{display:grid;justify-items:center;gap:2px;font-size:9.5px;color:#555}
+.posheet .pof-qr svg{border:1px solid #ddd}
+.posheet .pof-sup{padding:4px 16px 12px 44px;border-bottom:1.5px solid #222}
+.posheet .pof-dl{display:grid;grid-template-columns:112px minmax(0,1fr);gap:1px 10px}
+.posheet .pof-dl dt{color:#222}
+.posheet .pof-parties{display:grid;grid-template-columns:1fr 1fr;border-bottom:1.5px solid #222}
+.posheet .pof-parties > div{padding:8px 14px 14px}
+.posheet .pof-parties > div + div{border-left:1.5px solid #222}
+.posheet .pof-brand{display:flex;align-items:center;gap:12px;margin:4px 0 8px}
+.posheet .pof-brand img{width:36px;height:36px;object-fit:cover;border-radius:3px;flex:none}
+.posheet .pof-brand b{font-size:14px}
+.posheet .pof-title{text-align:center;font-weight:700;font-size:14px;padding:12px 0 8px}
+.posheet .pof-wrap{overflow-x:auto}
+.posheet table.pof-lines{width:100%;min-width:660px;border-collapse:collapse;font-size:11.5px;table-layout:fixed}
+.posheet .pof-lines th{border-top:1.5px solid #222;border-bottom:1.5px solid #222;border-right:1px solid #222;padding:4px 3px;text-align:center;vertical-align:top;font-weight:700;line-height:1.25;background:#fff;color:#111}
+.posheet .pof-lines th small{display:block;font-weight:400;font-size:9.5px;color:#333}
+.posheet .pof-lines td{border-right:1px solid #222;border-bottom:1px solid #b9b9b9;padding:2px 5px;height:21px;vertical-align:top;overflow-wrap:anywhere}
+.posheet .pof-lines th:last-child,.posheet .pof-lines td:last-child{border-right:0}
+.posheet .pof-lines .r{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.posheet .pof-lines .c{text-align:center;white-space:nowrap}
+.posheet .pof-sum{display:grid;grid-template-columns:minmax(0,1fr) 200px;border-top:1.5px solid #222;border-bottom:1.5px solid #222}
+.posheet .pof-tot{width:100%;border-collapse:collapse;font-size:12px;min-width:0}
+.posheet .pof-tot td{padding:2px 8px;border:0;border-bottom:1px solid #d4d4d4}
+.posheet .pof-tot td:first-child{padding-left:44px}
+.posheet .pof-tot td.r{width:120px;text-align:right;font-variant-numeric:tabular-nums}
+.posheet .pof-tot td:last-child{width:44px}
+.posheet .pof-tot tr.grand td{font-weight:700;border-bottom:0}
+.posheet .pof-pay{border-left:1.5px solid #222;padding:4px 10px;text-align:center}
+.posheet .pof-note{padding:6px 16px;margin:0;border-bottom:1.5px solid #222}
+.posheet .pof-sign{display:grid;grid-template-columns:repeat(3,1fr)}
+.posheet .pof-sign > div{padding:12px 10px 18px;text-align:center}
+.posheet .pof-sign > div + div{border-left:1.5px solid #222}
+.posheet .pof-sign h5{margin:0 0 30px;font-size:12px;font-weight:600}
+.posheet .pof-sign p{margin:2px 0;font-size:12px}
+.posheet .pof-sign .sig span{display:inline-block;width:62%;border-bottom:1px dotted #222;margin-left:4px}
+.posheet .pof-sign .blank{display:inline-block;width:120px}
+@media screen and (max-width:760px){
+  .posheet:has(.pof){padding:10px}
+  .posheet .pof-head{flex-direction:column}
+  .posheet .pof-parties,.posheet .pof-sum,.posheet .pof-sign{grid-template-columns:1fr}
+  .posheet .pof-parties > div + div,.posheet .pof-pay,.posheet .pof-sign > div + div{border-left:0;border-top:1.5px solid #222}
+  .posheet .pof-sup{padding-left:16px}
+}
+@media print{
+  .posheet:has(.pof){padding:0}
+  .posheet .pof{font-size:11.5px}
+  .posheet .pof-qr svg{width:66px;height:66px}
+  .posheet .pof-sup{padding-bottom:8px}
+  .posheet .pof-parties > div{padding:6px 12px 10px}
+  .posheet .pof-title{padding:8px 0 6px}
+  .posheet table.pof-lines{font-size:10.5px;min-width:0}
+  .posheet .pof-lines td{height:17px;padding:1px 4px}
+  .posheet .pof-sign > div{padding:8px 8px 12px}
+  .posheet .pof-sign h5{margin-bottom:24px}
+}
 .docbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:space-between}
 .docbar .grp{display:flex;gap:8px;flex-wrap:wrap}
 
-@media (max-width:760px){
+@media screen and (max-width:760px){
   .pickrow{grid-template-columns:1fr auto}
   .pickrow .have{grid-column:1/2;text-align:left}
   .grbody{grid-template-columns:1fr}
@@ -890,6 +957,7 @@ const ONLY=Array.isArray(window.APP_PAGES)?window.APP_PAGES:(PR_ONLY?["pr","rece
 const HQ_ONLY=!!window.HQ_ONLY;
 const HQ_CODE="HQ";
 const TH_MONTHS=["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
+const TH_MONTHS_LONG=["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
 
 /* ---------- helpers ---------- */
 const $=s=>document.querySelector(s);
@@ -915,6 +983,7 @@ function thDate(s,withTime){
   if(!m) return esc(s);
   return `${+m[3]} ${TH_MONTHS[+m[2]-1]} ${String(+m[1]+543).slice(-2)}${withTime&&m[4]?` ${m[4]}:${m[5]} น.`:""}`;
 }
+function thLong(s){ const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(str(s)); return m?`${+m[3]} ${TH_MONTHS_LONG[+m[2]-1]} ${+m[1]+543}`:esc(s); }
 const thTime=s=>{ const m=/(\d{2}):(\d{2})/.exec(str(s)); return m?`${m[1]}:${m[2]} น.`:""; };
 function thDay(d){ const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(d); if(!m) return d; return new Date(+m[1],+m[2]-1,+m[3]).toLocaleDateString("th-TH",{weekday:"long",day:"numeric",month:"long",year:"numeric"}); }
 const isoDay=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
@@ -953,8 +1022,8 @@ function deptFor(it){ const k=normKind(it.kind), c=normKind(it.cat); return dept
 const isDeptUser=()=>isBranch()&&!!deptOf(myCode());
 const isUnit=()=>isHQ()||isDeptUser();              /* has its own stock page */
 const canCentral=()=>isAdmin()||isUnit();
-const isTR=no=>String(no||"").startsWith("TR-");
-const isDO=no=>String(no||"").startsWith("DO-");
+const isTR=no=>/^TR-\d{4}-\d+$/.test(String(no||""));
+const isDO=no=>/^DO-.+-\d{4}-\d+$/.test(String(no||""));   /* PO numbers (e.g. GQ-QT2026-11-001) never match these */
 const isXfer=no=>isTR(no)||isDO(no);                /* ใบส่งของภายใน: TR จากสต็อกกลาง, DO จากฝ่ายผลิต */
 const srcOf=d=>d.from||(isTR(d.no)?HQ_CODE:"");
 const unitName=code=>code===HQ_CODE?"สต็อกกลาง":(deptOf(code)||{name:branchName(code)}).name;
@@ -2032,7 +2101,7 @@ async function openDecide(no){
     lines:d.lines.map(l=>{
       const it=byId.get(l.itemId), hist=(prices[l.itemId]||[]).filter(h=>h.price>0);
       const defSup=(it&&it.sup)||"", sup=defSup||(hist[0]&&hist[0].sup)||"";
-      const x={line:l.line,item:l.item,unit:l.unit,asked:l.qty,ok:true,qty:fmt(l.qty),sup,defSup,list:Number(list[l.itemId])||0,hist,price:"",autoPrice:true};
+      const x={line:l.line,item:l.item,unit:l.unit,asked:l.qty,ok:true,qty:fmt(l.qty),sup,defSup,list:Number(list[l.itemId])||0,hist,price:"",discount:"",autoPrice:true};
       const a=autoPrice(x); x.price=a?fmt(a.price):"";
       /* central stock (HQ column): offered for other branches; ticked when it has enough */
       const hq=it?num(str((it.stock||{})[HQ_CODE])):null;
@@ -2043,12 +2112,27 @@ async function openDecide(no){
     }),
     vat:fmt((me.settings&&me.settings.vat)||0), due:"", note:"", reason:""
   };
-  const vendors=new Set((me.suppliers||[]).concat((items||[]).map(it=>it.sup).filter(Boolean)));
-  $("#dl-vendor").innerHTML=[...vendors].sort((a,b)=>a.localeCompare(b,"th")).map(v=>`<option value="${esc(v)}"></option>`).join("");
+  fillVendorList();
   renderPRList();
   const box=document.querySelector(`[data-box="${CSS.escape(no)}"]`); if(box) box.scrollIntoView({block:"nearest"});
 }
 const sameSup=(a,b)=>str(a).trim().toLowerCase()===str(b).trim().toLowerCase();
+/* ผู้ขายจากชีต ผู้ขาย (มีรหัส เช่น M001) และชื่อผู้ส่งในชีตรายการ: รหัสขึ้นก่อนเรียงตามรหัส */
+function fillVendorList(){
+  const codes=new Map();
+  for(const v of (me&&me.vendors)||[]) if(v.name) codes.set(v.name,v.code||"");
+  for(const n of (me&&me.suppliers)||[]) if(n&&!codes.has(n)) codes.set(n,"");
+  for(const it of items||[]) if(it.sup&&!codes.has(it.sup)) codes.set(it.sup,"");
+  $("#dl-vendor").innerHTML=[...codes].sort((a,b)=>(a[1]?0:1)-(b[1]?0:1)||(a[1]&&b[1]?a[1].localeCompare(b[1]):a[0].localeCompare(b[0],"th")))
+    .map(([v,c])=>`<option value="${esc(v)}"${c?` label="${esc(c)} · ${esc(v)}"`:""}></option>`).join("");
+}
+/* พิมพ์รหัสผู้ขาย (เช่น m001) ในช่องผู้ขาย → เปลี่ยนเป็นชื่อเต็มให้ */
+function vendorByCode(t){
+  const k=str(t).trim().toUpperCase();
+  if(!/^[A-Z]\d+$/.test(k)) return "";
+  const v=((me&&me.vendors)||[]).find(x=>str(x.code).toUpperCase()===k);
+  return v?v.name:"";
+}
 /* price for the chosen supplier: the price list (ชีต ราคาสินค้า) when it is the item's usual supplier, else the last PO price */
 function autoPrice(l){
   if(l.list>0&&(!l.defSup||sameSup(l.defSup,l.sup))) return {price:l.list,src:"list"};
@@ -2066,22 +2150,23 @@ function centralNote(l){
   const left=l.hq-(num(l.qty).v||0);
   return left>=0?`สต็อกกลางมี ${fmt(l.hq)} → เหลือ ${fmt(left)}`:`สต็อกกลางมี ${fmt(l.hq)} ไม่พอ ขาด ${fmt(-left)}`;
 }
+/* ยอดรวมของรายการ = จำนวน × ราคา − ส่วนลด */
+const lineAmt=l=>Math.max(0,(num(l.qty).v||0)*(num(l.price).v||0)-(num(l.discount).v||0));
 function sumHTML(s){
   let sub=0;
-  for(const l of s.lines) if(l.ok&&!l.central) sub+=(num(l.qty).v||0)*(num(l.price).v||0);
+  for(const l of s.lines) if(l.ok&&!l.central) sub+=lineAmt(l);
   const vat=num(s.vat).v||0, v=Math.round(sub*vat)/100;
-  return (vat?`<tr><td colspan="6" class="r">รวมเป็นเงิน</td><td class="r">${money(sub)}</td></tr><tr><td colspan="6" class="r">VAT ${fmt(vat)}%</td><td class="r">${money(v)}</td></tr>`:"")+
-    `<tr class="grand"><td colspan="6" class="r">รวมทั้งสิ้น (บาท)</td><td class="r">${money(sub+v)}</td></tr>`;
+  return (vat?`<tr><td colspan="7" class="r">รวมเป็นเงิน</td><td class="r">${money(sub)}</td></tr><tr><td colspan="7" class="r">VAT ${fmt(vat)}%</td><td class="r">${money(v)}</td></tr>`:"")+
+    `<tr class="grand"><td colspan="7" class="r">รวมทั้งสิ้น (บาท)</td><td class="r">${money(sub+v)}</td></tr>`;
 }
 function decideTotals(s){
   const groups=new Map(); let blank=0, tr=0;
   for(const l of s.lines){
     if(!l.ok) continue;
     if(l.central){ tr++; continue; }
-    const q=num(l.qty).v||0, p=num(l.price).v;
     if(l.price.trim()==="") blank++;
     const k=l.sup.trim()||"(ยังไม่ใส่ผู้ขาย)";
-    const g=groups.get(k)||{n:0,amt:0}; g.n++; g.amt+=q*(p||0); groups.set(k,g);
+    const g=groups.get(k)||{n:0,amt:0}; g.n++; g.amt+=lineAmt(l); groups.set(k,g);
   }
   return {groups,blank,tr};
 }
@@ -2131,8 +2216,8 @@ function renderDecide(no){
   if(s.dept){ box.innerHTML=deptDecideHTML(no,s); return; }
   if(s.loading){ box.innerHTML='<p class="msgline">กำลังโหลดราคาล่าสุด…</p>'; return; }
   box.innerHTML=`<h3>พิจารณาและออกใบสั่งซื้อ</h3>
-    <div class="linesbox"><table class="lines"><thead><tr><th>อนุมัติ</th><th>สินค้า</th><th class="r">ขอ</th><th>สั่ง</th><th>ผู้ขาย</th><th>ราคา/หน่วย</th><th class="r">รวม</th></tr></thead><tbody>
-    ${s.lines.map(l=>{ const amt=(num(l.qty).v||0)*(num(l.price).v||0);
+    <div class="linesbox"><table class="lines"><thead><tr><th>อนุมัติ</th><th>สินค้า</th><th class="r">ขอ</th><th>สั่ง</th><th>ผู้ขาย</th><th>ราคา/หน่วย</th><th>ส่วนลด (บาท)</th><th class="r">รวม</th></tr></thead><tbody>
+    ${s.lines.map(l=>{ const amt=lineAmt(l);
       const src=l.canCentral?`<label class="srcopt"><input type="checkbox" data-k="central"${l.central?" checked":""}> จ่ายจากสต็อกกลาง <span class="muted">(มี ${l.hq===null?"–":fmt(l.hq)})</span></label>`:"";
       return `<tr class="${l.ok?"":"off"}${l.central?" fromhq":""}" data-dl="${l.line}">
       <td class="chk"><input type="checkbox" class="big" data-k="ok"${l.ok?" checked":""} aria-label="อนุมัติ ${esc(l.item)}"></td>
@@ -2140,6 +2225,7 @@ function renderDecide(no){
       <td><input class="cell num" data-k="qty" value="${esc(l.qty)}" inputmode="decimal" style="width:80px" aria-label="จำนวนสั่ง ${esc(l.item)}"></td>
       <td>${src}${l.central?`<div class="cnote${centralShort(l)?" short":""}" data-cnote>${esc(centralNote(l))}</div>`:`<input class="cell" data-k="sup" value="${esc(l.sup)}" list="dl-vendor" style="min-width:150px" aria-label="ผู้ขาย ${esc(l.item)}">`}</td>
       <td>${l.central?'<span class="muted">ไม่มีค่าใช้จ่าย</span>':`<input class="cell num" data-k="price" value="${esc(l.price)}" inputmode="decimal" style="width:100px" placeholder="0.00" aria-label="ราคาต่อหน่วย ${esc(l.item)}"><span class="hintprice" data-hint>${esc(priceHint(l))}</span>`}</td>
+      <td>${l.central?"":`<input class="cell num" data-k="discount" value="${esc(l.discount)}" inputmode="decimal" style="width:84px" placeholder="0" aria-label="ส่วนลด ${esc(l.item)}">`}</td>
       <td class="r" data-amt>${l.ok&&!l.central?money(amt):"–"}</td></tr>`; }).join("")}
     </tbody><tfoot data-sum>${sumHTML(s)}</tfoot></table></div>
     <div class="opts">
@@ -2174,6 +2260,7 @@ function onDecideInput(e){
     if(k==="central"){ l.central=el.checked; renderDecide(box.dataset.box); return; }
     if(k==="ok"){ l.ok=el.checked; tr.classList.toggle("off",!l.ok); }
     else if(k==="sup"){
+      if(e.type==="change"){ const nm=vendorByCode(el.value); if(nm) el.value=nm; }
       l.sup=el.value;
       if(!l.price.trim()||l.autoPrice){ const a=autoPrice(l); l.price=a?fmt(a.price):""; l.autoPrice=true; tr.querySelector('[data-k="price"]').value=l.price; }
       tr.querySelector("[data-hint]").textContent=priceHint(l);
@@ -2181,7 +2268,7 @@ function onDecideInput(e){
     else { l[k]=el.value; if(k==="price") l.autoPrice=false; }
     const cn=tr.querySelector("[data-cnote]");
     if(cn){ cn.textContent=centralNote(l); cn.classList.toggle("short",centralShort(l)); }
-    tr.querySelector("[data-amt]").textContent=l.ok&&!l.central?money((num(l.qty).v||0)*(num(l.price).v||0)):"–";
+    tr.querySelector("[data-amt]").textContent=l.ok&&!l.central?money(lineAmt(l)):"–";
   }else s[k]=el.value;
   box.querySelector("[data-preview]").textContent=previewText(s);
   box.querySelector("[data-sum]").innerHTML=sumHTML(s);
@@ -2193,11 +2280,14 @@ async function submitDecide(no,approve,btn){
   if(!s||s.loading||prBusy) return;
   const msg=t=>{ const m=box.querySelector("[data-dmsg]"); m.textContent=t; m.className="msgline warn"; };
   if(s.dept) return submitDeptDecide(no,approve,btn,s,msg);
-  const lines=s.lines.map(l=>({line:l.line,ok:approve&&l.ok,qty:l.qty.trim(),src:l.central?"central":"",sup:l.central?"":l.sup.trim(),price:l.central?"":l.price.trim(),reason:(!approve||!l.ok)?s.reason.trim():""}));
+  const lines=s.lines.map(l=>({line:l.line,ok:approve&&l.ok,qty:l.qty.trim(),src:l.central?"central":"",sup:l.central?"":l.sup.trim(),price:l.central?"":l.price.trim(),
+    discount:l.central?"":str(l.discount).trim(),reason:(!approve||!l.ok)?s.reason.trim():""}));
   if(approve){
     if(!lines.some(l=>l.ok)) return msg("ยังไม่ได้ติ๊กอนุมัติสักรายการ ถ้าจะปฏิเสธทั้งใบ กด “ไม่อนุมัติทั้งใบ”");
     const bad=lines.find(l=>l.ok&&(!(num(l.qty).v>0)||(!l.src&&(!num(l.price).ok||!l.sup))));
     if(bad){ const it=s.lines.find(x=>x.line===bad.line).item; return msg(!(num(bad.qty).v>0)?`จำนวนสั่งของ “${it}” ต้องมากกว่า 0`:!bad.sup?`ใส่ผู้ขายของ “${it}”`:`ราคาของ “${it}” ต้องเป็นตัวเลข`); }
+    const badD=lines.find(l=>l.ok&&!l.src&&(!num(l.discount).ok||(num(l.discount).v||0)>(num(l.qty).v||0)*(num(l.price).v||0)));
+    if(badD) return msg(`ส่วนลดของ “${s.lines.find(x=>x.line===badD.line).item}” ต้องเป็นตัวเลข และไม่เกินยอดของรายการ`);
     if(!num(s.vat).ok) return msg("VAT ต้องเป็นตัวเลข");
     const short=s.lines.filter(l=>l.ok&&l.central&&centralShort(l));
     if(short.length&&!armed(btn,"สต็อกกลางไม่พอ · กดอีกครั้งเพื่อยืนยัน")) return msg(`สต็อกกลางไม่พอหรือยังไม่ได้นับ: ${short.map(l=>l.item).join(", ")} · แก้จำนวน หรือเอาติ๊ก “จ่ายจากสต็อกกลาง” ออกแล้วสั่งจากผู้ขาย หรือกดอีกครั้งเพื่อยืนยัน`);
@@ -2383,7 +2473,7 @@ async function loadPO(){
 function poCard(d){
   const t=isXfer(d.no);
   return `<article class="doc"><div class="dochead"><a class="no" href="#po/${encodeURIComponent(d.no)}">${esc(d.no)}</a>${t?'<span class="pill p-tr">ใบส่งของ</span>':""}<span class="pill ${PO_CLS[d.status]||"p-none"}">${esc(d.status)}</span>
-    <span class="meta">${thDate(d.date,true)} · ${t?`จาก ${esc(unitName(srcOf(d)))}`:`ผู้ขาย ${esc(d.sup)}`} · ส่งที่ ${esc(d.branchName)}${d.due?` · กำหนดส่ง ${thDate(d.due)}`:""}</span>
+    <span class="meta">${thDate(d.date,true)} · ${t?`จาก ${esc(unitName(srcOf(d)))}`:`ผู้ขาย ${d.supCode?`${esc(d.supCode)} · `:""}${esc(d.sup)}`} · ส่งที่ ${esc(d.branchName)}${d.due?` · กำหนดส่ง ${thDate(d.due)}`:""}</span>
     <span class="right">${t?"":`<b>${money(d.total)} บาท</b>`}</span></div>
     <p class="meta-line">${esc(live(d).map(l=>l.item).slice(0,4).join(", "))}${live(d).length>4?` และอีก ${live(d).length-4} รายการ`:""} · ${progress(d)}${d.pr?` · จาก ${esc(d.pr)}`:""}</p>
     <div class="docactions"><a class="btn small" href="#po/${encodeURIComponent(d.no)}">ดู / พิมพ์</a>${canReceive(d)?`<a class="btn small primary" href="${rcHref(d.no)}">รับของ</a>`:""}</div></article>`;
@@ -2394,7 +2484,7 @@ function renderPOList(){
     .map(([k,l])=>`<button type="button" class="chip" data-pof="${k}" aria-pressed="${poFilter===k}">${l}</button>`).join("");
   const q=$("#poQ").value.trim().toLowerCase(), bf=isAdmin()?$("#poBranchFilter").value:"";
   const list=poDocs.filter(d=>(poFilter==="all"||d.status==="รอส่งของ"||d.status==="รับบางส่วน")&&(!bf||d.branch===bf)&&
-    (!q||[d.no,d.sup,d.branchName,d.pr,...d.lines.map(l=>l.item)].join(" ").toLowerCase().includes(q)));
+    (!q||[d.no,d.sup,d.supCode,d.branchName,d.pr,...d.lines.map(l=>l.item)].join(" ").toLowerCase().includes(q)));
   $("#poList").innerHTML=list.length?list.map(poCard).join(""):`<div class="empty-card">${poFilter==="open"?"ไม่มีใบสั่งซื้อที่รอรับของ":"ยังไม่มีใบสั่งซื้อ"}</div>`;
 }
 $("#poQ").addEventListener("input",renderPOList);
@@ -2432,10 +2522,11 @@ async function openPOEdit(btn){
   if(fresh.doc.status==="ยกเลิก"){ say("#poViewMsg","ใบนี้ยกเลิกแล้ว แก้ไม่ได้","warn"); return; }
   const d=fresh.doc, byId=new Map((items||[]).map(it=>[it.sid,it]));
   const prices=pj.ok?pj.prices||{}:{}, list=pj.ok?pj.list||{}:{};
+  fillVendorList();
   poEd={no:d.no,tr,sup:str(d.sup),due:str(d.due),vat:fmt(Number(d.vat)||0),note:str(d.note),
     lines:d.lines.map(l=>{
       const it=byId.get(l.itemId);
-      const x={line:l.line,item:l.item,unit:l.unit,itemId:l.itemId,oldQty:Number(l.qty)||0,qty:fmt(l.qty),price:fmt(Number(l.price)||0),
+      const x={line:l.line,item:l.item,unit:l.unit,itemId:l.itemId,oldQty:Number(l.qty)||0,qty:fmt(l.qty),price:fmt(Number(l.price)||0),discount:Number(l.discount)?fmt(l.discount):"",
         received:Number(l.received)||0,cancelled:l.status==="ยกเลิก",cancel:false,hint:"",
         defSup:(it&&it.sup)||"",list:Number(list[l.itemId])||0,hist:(prices[l.itemId]||[]).filter(h=>h.po!==d.no&&h.price>0),sup:str(d.sup)};
       if(!tr&&!x.cancelled&&!(Number(l.price)>0)){ const a=autoPrice(x); if(a){ x.price=fmt(a.price); x.hint=a.src==="list"?`ใส่ให้จากราคาตั้งไว้`:`ใส่ให้จากราคาล่าสุด (${thDate(a.date)})`; } }
@@ -2455,10 +2546,10 @@ function trQtyHint(l){
 }
 function poEdSum(){
   const s=poEd; let sub=0;
-  for(const l of s.lines) if(!l.cancelled&&!l.cancel) sub+=(num(l.qty).v||0)*(num(l.price).v||0);
+  for(const l of s.lines) if(!l.cancelled&&!l.cancel) sub+=lineAmt(l);
   const vat=num(s.vat).v||0, v=Math.round(sub*vat)/100;
-  return (vat?`<tr><td colspan="4" class="r">รวมเป็นเงิน</td><td class="r">${money(sub)}</td><td></td></tr><tr><td colspan="4" class="r">VAT ${fmt(vat)}%</td><td class="r">${money(v)}</td><td></td></tr>`:"")+
-    `<tr class="grand"><td colspan="4" class="r">รวมทั้งสิ้น (บาท)</td><td class="r">${money(sub+v)}</td><td></td></tr>`;
+  return (vat?`<tr><td colspan="5" class="r">รวมเป็นเงิน</td><td class="r">${money(sub)}</td><td></td></tr><tr><td colspan="5" class="r">VAT ${fmt(vat)}%</td><td class="r">${money(v)}</td><td></td></tr>`:"")+
+    `<tr class="grand"><td colspan="5" class="r">รวมทั้งสิ้น (บาท)</td><td class="r">${money(sub+v)}</td><td></td></tr>`;
 }
 function renderPOEdit(){
   const s=poEd, box=$("#poEdit"); if(!s){ closePOEdit(); return; }
@@ -2471,14 +2562,15 @@ function renderPOEdit(){
       ${s.tr?"":`<label>VAT (%)<input class="cell num" data-e="vat" value="${esc(s.vat)}" inputmode="decimal" style="width:80px"></label>`}
       <label style="flex:2 1 260px">หมายเหตุ (พิมพ์บนใบ)<input class="cell" data-e="note" value="${esc(s.note)}"></label>
     </div>
-    <div class="linesbox"><table class="lines"><thead><tr><th>รายการ</th><th class="r">รับแล้ว</th><th>จำนวน</th>${s.tr?"":'<th>ราคา/หน่วย</th><th class="r">รวม</th>'}<th>ยกเลิกรายการ</th></tr></thead><tbody>
+    <div class="linesbox"><table class="lines"><thead><tr><th>รายการ</th><th class="r">รับแล้ว</th><th>จำนวน</th>${s.tr?"":'<th>ราคา/หน่วย</th><th>ส่วนลด (บาท)</th><th class="r">รวม</th>'}<th>ยกเลิกรายการ</th></tr></thead><tbody>
     ${s.lines.map(l=>{
-      if(l.cancelled) return `<tr class="off"><td>${esc(l.item)}<div class="muted">${esc(l.unit)}</div></td><td class="r">–</td><td colspan="${s.tr?1:3}"><span class="pill p-none">ยกเลิกแล้ว</span></td><td></td></tr>`;
-      const amt=(num(l.qty).v||0)*(num(l.price).v||0);
+      if(l.cancelled) return `<tr class="off"><td>${esc(l.item)}<div class="muted">${esc(l.unit)}</div></td><td class="r">–</td><td colspan="${s.tr?1:4}"><span class="pill p-none">ยกเลิกแล้ว</span></td><td></td></tr>`;
+      const amt=lineAmt(l);
       return `<tr data-el="${l.line}" class="${l.cancel?"off":""}">
       <td>${esc(l.item)}<div class="muted">${esc(l.unit)}</div></td><td class="r">${l.received?fmt(l.received):"–"}</td>
       <td><input class="cell num" data-e="qty" value="${esc(l.qty)}" inputmode="decimal" style="width:80px" aria-label="จำนวน ${esc(l.item)}"${l.cancel?" disabled":""}>${s.tr?`<span class="hintprice" data-qhint>${esc(trQtyHint(l))}</span>`:""}</td>
       ${s.tr?"":`<td><input class="cell num" data-e="price" value="${esc(l.price)}" inputmode="decimal" style="width:100px" placeholder="0.00" aria-label="ราคาต่อหน่วย ${esc(l.item)}"${l.cancel?" disabled":""}>${l.hint?`<span class="hintprice">${esc(l.hint)}</span>`:""}</td>
+      <td><input class="cell num" data-e="discount" value="${esc(l.discount)}" inputmode="decimal" style="width:84px" placeholder="0" aria-label="ส่วนลด ${esc(l.item)}"${l.cancel?" disabled":""}></td>
       <td class="r" data-amt>${l.cancel?"–":money(amt)}</td>`}
       <td class="chk">${l.received?'<span class="muted" title="รับของแล้ว ยกเลิกไม่ได้">–</span>':`<input type="checkbox" class="big" data-e="cancel"${l.cancel?" checked":""} aria-label="ยกเลิก ${esc(l.item)}">`}</td></tr>`; }).join("")}
     </tbody>${s.tr?"":`<tfoot data-esum>${poEdSum()}</tfoot>`}</table></div>
@@ -2496,9 +2588,12 @@ function onPOEditInput(e){
     if(k==="cancel"){ l.cancel=el.checked; renderPOEdit(); return; }
     l[k]=el.value;
     if(k==="price"&&l.hint){ l.hint=""; const hs=tr.querySelector(".hintprice"); if(hs) hs.remove(); }
-    const a=tr.querySelector("[data-amt]"); if(a) a.textContent=money((num(l.qty).v||0)*(num(l.price).v||0));
+    const a=tr.querySelector("[data-amt]"); if(a) a.textContent=money(lineAmt(l));
     const h=tr.querySelector("[data-qhint]"); if(h) h.textContent=trQtyHint(l);
-  }else s[k]=el.value;
+  }else{
+    if(k==="sup"&&e.type==="change"){ const nm=vendorByCode(el.value); if(nm) el.value=nm; }
+    s[k]=el.value;
+  }
   const f=$("#poEdit [data-esum]"); if(f) f.innerHTML=poEdSum();
 }
 async function savePOEdit(btn){
@@ -2511,7 +2606,10 @@ async function savePOEdit(btn){
     const q=num(l.qty);
     if(!(q.v>0)) return m(`จำนวนของ ${l.item} ต้องมากกว่า 0`);
     if(q.v<l.received) return m(`${l.item} รับไปแล้ว ${fmt(l.received)} จำนวนต้องไม่น้อยกว่านี้`);
-    if(!s.tr){ const p=num(l.price); if(!p.ok||(p.v||0)<0) return m(`ราคาของ ${l.item} ต้องเป็นตัวเลข`); }
+    if(!s.tr){
+      const p=num(l.price); if(!p.ok||(p.v||0)<0) return m(`ราคาของ ${l.item} ต้องเป็นตัวเลข`);
+      const dc=num(l.discount); if(!dc.ok||(dc.v||0)>(q.v||0)*(p.v||0)) return m(`ส่วนลดของ ${l.item} ต้องเป็นตัวเลข และไม่เกินยอดของรายการ`);
+    }
   }
   if(!s.tr&&!s.sup.trim()) return m("ต้องใส่ชื่อผู้ขาย");
   if(!s.tr){ const v=num(s.vat); if(!v.ok||(v.v||0)<0||(v.v||0)>100) return m("VAT ต้องเป็นตัวเลข 0–100"); }
@@ -2519,7 +2617,7 @@ async function savePOEdit(btn){
   if(cancels.length&&!armed(btn,`กดอีกครั้งเพื่อบันทึกและยกเลิก ${cancels.length} รายการ`)) return m(`จะยกเลิก: ${cancels.map(l=>l.item).join(", ")} · สาขาจะเห็นว่ารายการนี้ไม่อนุมัติ`);
   btn.disabled=true; say("#poEdit [data-emsg]","กำลังบันทึก…");
   const j=await call("po_update",{no:s.no,sup:s.sup.trim(),due:s.due,vat:s.vat,note:s.note.trim(),
-    lines:open.map(l=>({line:l.line,qty:l.qty.trim(),price:s.tr?"":l.price.trim(),cancel:l.cancel}))});
+    lines:open.map(l=>({line:l.line,qty:l.qty.trim(),price:s.tr?"":l.price.trim(),discount:s.tr?"":str(l.discount).trim(),cancel:l.cancel}))});
   btn.disabled=false;
   if(!j.ok) return m(errText(j));
   const no=s.no, tr=s.tr;
@@ -2528,7 +2626,7 @@ async function savePOEdit(btn){
   updateBadges(); if(tr) load();
 }
 $("#poEdit").addEventListener("input",onPOEditInput);
-$("#poEdit").addEventListener("change",e=>{ if(e.target.matches('[data-e="cancel"],[data-e="due"]')) onPOEditInput(e); });
+$("#poEdit").addEventListener("change",e=>{ if(e.target.matches('[data-e="cancel"],[data-e="due"],[data-e="sup"]')) onPOEditInput(e); });
 /* ใบส่งของ (ภายใน): จากสต็อกกลาง (TR) หรือจากฝ่ายผลิต (DO) ไปที่สาขา ไม่มีราคา */
 function xferSheetHTML(P){
   const d=P.doc, s=P.settings||{}, from=P.supplier||{}, br=P.branch||{};
@@ -2552,29 +2650,53 @@ function xferSheetHTML(P){
     <div class="ps-sign"><div><span></span>ผู้ส่งของ (${esc(isTR(d.no)?"คลังกลาง":from.name||"ฝ่าย")})</div><div><span></span>ผู้รับของ (สาขา)</div></div>
   </footer>`;
 }
+/* โลโก้แบรนด์ของสาขาปลายทาง (Ship to) ดูจากชื่อสาขา */
+function brandLogo(name){
+  const n=str(name).toLowerCase();
+  return "logos/"+(n.includes("kiln")?"kiln":n.includes("earth")?"earthtone":n.includes("roamer")?"roamer":n.includes("masando")?"masando":n.includes("general")?"general":"graph")+".jpg";
+}
+/* ใบสั่งซื้อ: แบบฟอร์มเดียวกับที่ฝ่ายจัดซื้อใช้ (Supplier / Bill to / Ship to / ตารางรายการ / ยอดเงิน / ผู้จัดทำ ผู้ตรวจสอบ ผู้อนุมัติ) */
 function poSheetHTML(P){
   if(isXfer(P.doc.no)) return xferSheetHTML(P);
   const d=P.doc, s=P.settings||{}, sup=P.supplier||{}, br=P.branch||{};
   const lines=d.status==="ยกเลิก"?d.lines:live(d);
-  return (d.status==="ยกเลิก"?'<div class="stamp">ยกเลิก</div>':"")+`
-  <header class="ps-head">
-    <div class="ps-co"><img src="logos/graph.jpg" alt=""><div><b>${esc(s.company||"ชื่อบริษัท")}</b>${s.company?"":' <span style="color:#b91c1c;font-size:12px">(กรอกในชีต ตั้งค่า)</span>'}
-      ${s.companyAddr?`<div>${esc(s.companyAddr)}</div>`:""}<div>${s.companyTax?`เลขประจำตัวผู้เสียภาษี ${esc(s.companyTax)}`:""}${s.companyPhone?`${s.companyTax?" · ":""}โทร ${esc(s.companyPhone)}`:""}</div></div></div>
-    <div class="ps-title"><h2>ใบสั่งซื้อ</h2><div class="en">PURCHASE ORDER</div>
-      <table class="ps-kv"><tr><th>เลขที่</th><td><b>${esc(d.no)}</b></td></tr><tr><th>วันที่</th><td>${thDate(d.date)}</td></tr>${d.pr?`<tr><th>อ้างอิงใบขอซื้อ</th><td>${esc(d.pr)}</td></tr>`:""}</table></div>
+  const kv=(k,v)=>`<dt>${k}</dt><dd>${esc(v||"")}</dd>`;
+  const vat=Number(d.vat)||0, ordered=thDate(d.prDate||d.date), due=d.due?thDate(d.due):"";
+  const sign=(t,n,pos)=>`<div><h5>${t}</h5><p class="sig">ลงชื่อ<span></span></p><p>( ${n?esc(n):'<span class="blank"></span>'} )</p><p>${esc(pos||"")}</p></div>`;
+  const shipName=br.name||d.branchName;
+  return (d.status==="ยกเลิก"?'<div class="stamp">ยกเลิก</div>':"")+`<div class="pof">
+  <header class="pof-head">
+    <h2>ใบสั่งซื้อ Purchase Order</h2>
+    <div class="pof-meta">
+      <dl class="pof-kv"><dt>เลขที่</dt><dd><b>${esc(d.no)}</b></dd><dt>วันที่จัดทำ</dt><dd>${thLong(d.date)}</dd>${d.pr?`<dt>อ้างอิงใบขอซื้อ</dt><dd>${esc(d.pr)}</dd>`:""}</dl>
+      <div class="pof-qr">${QR.svg(poLink(d.no),88)}<small>สาขาสแกนเมื่อได้รับของ</small></div>
+    </div>
   </header>
-  <section class="ps-parties">
-    <div><h4>ผู้ขาย</h4><b>${esc(sup.name||d.sup)}</b>${sup.contact?`<div>ติดต่อ ${esc(sup.contact)}</div>`:""}${sup.phone?`<div>โทร ${esc(sup.phone)}</div>`:""}${sup.addr?`<div>${esc(sup.addr)}</div>`:""}${sup.tax?`<div>เลขประจำตัวผู้เสียภาษี ${esc(sup.tax)}</div>`:""}${sup.terms?`<div>เงื่อนไขชำระเงิน ${esc(sup.terms)}</div>`:""}</div>
-    <div><h4>สถานที่ส่งของ</h4><b>${esc(br.name||d.branchName)}</b>${br.addr?`<div>${esc(br.addr)}</div>`:""}${br.contact||br.phone?`<div>${br.contact?`ติดต่อ ${esc(br.contact)}`:""}${br.phone?` โทร ${esc(br.phone)}`:""}</div>`:""}${d.due?`<div class="due">กำหนดส่ง ${thDate(d.due)}</div>`:""}</div>
+  <section class="pof-sup"><h4>Supplier:</h4><dl class="pof-dl">
+    ${kv("ชื่อ :",sup.name||d.sup)}${sup.code?kv("รหัสผู้ขาย :",sup.code):""}${kv("ที่อยู่ :",sup.addr)}${kv("เลขผู้เสียภาษี :",sup.tax)}${kv("โทรศัพท์ :",sup.phone)}${sup.contact?kv("ผู้ติดต่อ :",sup.contact):""}${sup.email?kv("E-mail :",sup.email):""}
+  </dl></section>
+  <section class="pof-parties">
+    <div><h4>Bill to:</h4><div class="pof-brand"><img src="logos/graph.jpg" alt=""><b>${esc(s.companyShort||s.company||"")}</b></div><dl class="pof-dl">
+      ${kv("ชื่อ :",s.company)}${kv("ที่อยู่ :",s.companyAddr)}${kv("เลขผู้เสียภาษี :",s.companyTax)}${kv("E-mail :",s.companyEmail)}${kv("โทรศัพท์ :",s.companyPhone)}</dl></div>
+    <div><h4>Ship to:</h4><div class="pof-brand"><img src="${brandLogo(shipName)}" alt=""><b>${esc(shipName)}</b></div><dl class="pof-dl">
+      ${kv("ชื่อ :",shipName)}${kv("ที่อยู่ :",br.addr)}${kv("เลขผู้เสียภาษี :",br.tax||s.companyTax)}${kv("E-mail :",br.email)}${kv("โทรศัพท์ :",br.phone)}${br.contact?kv("ผู้ติดต่อ :",br.contact):""}</dl></div>
   </section>
-  <table class="ps-lines"><thead><tr><th style="width:44px">ลำดับ</th><th>รายการ</th><th class="r">จำนวน</th><th>หน่วย</th><th class="r">ราคาต่อหน่วย</th><th class="r">จำนวนเงิน</th></tr></thead>
-  <tbody>${lines.map((l,i)=>`<tr><td>${i+1}</td><td>${esc(l.item)}</td><td class="r">${fmt(l.qty)}</td><td>${esc(l.unit)}</td><td class="r">${money(l.price)}</td><td class="r">${money(l.amount)}</td></tr>`).join("")}</tbody>
-  <tfoot><tr><td colspan="5" class="r">รวมเงิน</td><td class="r">${money(d.subtotal)}</td></tr>${Number(d.vat)?`<tr><td colspan="5" class="r">ภาษีมูลค่าเพิ่ม ${fmt(d.vat)}%</td><td class="r">${money(d.vatAmount)}</td></tr>`:""}<tr class="grand"><td colspan="5" class="r">ยอดสุทธิ</td><td class="r">${money(d.total)}</td></tr></tfoot></table>
-  ${d.note||s.poNote?`<p class="ps-note"><b>หมายเหตุ</b> ${esc([d.note,s.poNote].filter(Boolean).join(" · "))}</p>`:""}
-  <footer class="ps-foot">
-    <div class="ps-qr">${QR.svg(poLink(d.no),116)}<div><b>กรุณาแนบใบสั่งซื้อนี้มากับสินค้า</b><br>สาขาสแกน QR นี้เมื่อได้รับของ<br><span style="color:#555">${esc(d.no)}</span></div></div>
-    <div class="ps-sign"><div><span></span>ผู้สั่งซื้อ</div><div><span></span>ผู้อนุมัติ</div></div>
-  </footer>`;
+  <div class="pof-title">ใบสั่งซื้อ Purchase Order</div>
+  <div class="pof-wrap"><table class="pof-lines">
+    <colgroup><col style="width:40px"><col><col style="width:50px"><col style="width:46px"><col style="width:64px"><col style="width:58px"><col style="width:70px"><col style="width:64px"><col style="width:64px"><col style="width:72px"></colgroup>
+    <thead><tr><th>ลำดับ<small>NO.</small></th><th>รายละเอียดสินค้า<small>Item Description</small></th><th>จำนวน<small>Quantity</small></th><th>หน่วย<small>Unit</small></th><th>ราคาต่อหน่วย<small>Unit Price</small></th><th>ส่วนลด<small>Discount</small></th><th>ยอดรวม<small>Total</small></th><th>วันที่สั่ง<small>Date Ordered</small></th><th>กำหนดส่ง<small>Due Date</small></th><th>หมายเหตุ<small>Remark</small></th></tr></thead>
+    <tbody>${lines.map((l,i)=>`<tr><td class="c">${i+1}</td><td>${esc(l.item)}</td><td class="c">${fmt(l.qty)}</td><td class="c">${esc(l.unit)}</td><td class="r">${money(l.price)}</td><td class="r">${Number(l.discount)?money(l.discount):""}</td><td class="r">${money(l.amount)}</td><td class="c">${ordered}</td><td class="c">${due}</td><td>${esc(l.remark||"")}</td></tr>`).join("")}${
+      '<tr class="fill"><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>'.repeat(Math.max(0,14-lines.length))}</tbody></table></div>
+  <section class="pof-sum">
+    <table class="pof-tot"><tr><td>รวมเป็นเงิน</td><td class="r">${money(d.subtotal)}</td><td>บาท</td></tr>
+      <tr><td>ภาษีมูลค่าเพิ่ม ${fmt(vat||Number(s.vat)||7)}%</td><td class="r">${vat?money(d.vatAmount):"-"}</td><td>บาท</td></tr>
+      <tr><td>ราคาไม่รวมภาษีมูลค่าเพิ่ม</td><td class="r">${money(d.subtotal)}</td><td>บาท</td></tr>
+      <tr class="grand"><td>จำนวนเงินรวมทั้งสิ้น</td><td class="r">${money(d.total)}</td><td>บาท</td></tr></table>
+    <div class="pof-pay"><b>วิธีการชำระเงิน :</b><div>${esc(sup.terms||"")}</div></div>
+  </section>
+  ${d.note||s.poNote?`<p class="pof-note"><b>หมายเหตุ</b> ${esc([d.note,s.poNote].filter(Boolean).join(" · "))}</p>`:""}
+  <section class="pof-sign">${sign("ผู้จัดทำ",s.signMaker,s.signMakerPos)}${sign("ผู้ตรวจสอบ",s.signChecker,s.signCheckerPos)}${sign("ผู้อนุมัติ",s.signApprover,s.signApproverPos)}</section>
+  </div>`;
 }
 async function showPO(no,quiet){
   closePOEdit();
