@@ -478,6 +478,12 @@ tr.item.deleted .cell:disabled{text-decoration:line-through;opacity:1}
   .ctmove .k{display:none}
   .ctmove .who,.ctmove .pill{grid-column:2/-1}
 }
+
+/* purchasing: edit a PO / transfer slip */
+.poedit{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:16px}
+.poedit h3{margin:0}
+.poedit .lines td.chk{text-align:center}
+.poedit .lines tfoot td:last-child{width:1%}
 </style>
 </head>
 <body class="pr-only">
@@ -674,6 +680,7 @@ tr.item.deleted .cell:disabled{text-decoration:line-through;opacity:1}
         <div class="grp" id="poActions"></div>
       </div>
       <p class="msgline" id="poViewMsg" role="status" aria-live="polite"></p>
+      <section class="decide poedit" id="poEdit" hidden aria-label="แก้ไขใบสั่งซื้อ"></section>
       <article class="posheet" id="poSheet" aria-label="ใบสั่งซื้อ"></article>
     </div>
   </div>
@@ -847,7 +854,7 @@ const ERR={
   bad_price:"ราคาต้องเป็นตัวเลข", no_supplier:"ยังไม่ได้ใส่ผู้ขาย", no_branch:"ไม่พบสาขานี้ในชีต สาขา",
   conflict:"มีคนแก้ข้อมูลระหว่างนี้", old_page:"หน้าเว็บเป็นเวอร์ชันเก่า กด Ctrl+F5 แล้วลองใหม่",
   setup_needed:"ยังไม่ได้เรียกใช้ setupV2 ใน Apps Script", photo_too_big:"รูปใหญ่เกินไป", too_many:"รายการเยอะเกินไป",
-  item_not_found:"มีสินค้าที่ถูกลบออกจากตารางไปแล้ว", central_self:"ใบขอซื้อของส่วนกลางเอง จ่ายจากสต็อกกลางไม่ได้", bad_date:"วันที่สั่งซื้อไม่ถูกต้อง เลือกได้ถึงวันนี้", no_stock_column:"ยังไม่มีคอลัมน์สต็อกของสาขานี้", bad_request:"คำขอไม่ถูกต้อง"
+  item_not_found:"มีสินค้าที่ถูกลบออกจากตารางไปแล้ว", below_received:"จำนวนต้องไม่น้อยกว่าที่รับไปแล้ว", bad_price:"ราคาต้องเป็นตัวเลขและไม่ติดลบ", bad_vat:"VAT ต้องเป็นตัวเลข 0–100", bad_sup:"ต้องใส่ชื่อผู้ขาย", cancelled:"ใบนี้ยกเลิกแล้ว แก้ไม่ได้", all_cancelled:"ยกเลิกทุกรายการไม่ได้ ถ้าจะยกเลิกทั้งใบ ให้ใช้ปุ่มยกเลิกของใบ", central_self:"ใบขอซื้อของส่วนกลางเอง จ่ายจากสต็อกกลางไม่ได้", bad_date:"วันที่สั่งซื้อไม่ถูกต้อง เลือกได้ถึงวันนี้", no_stock_column:"ยังไม่มีคอลัมน์สต็อกของสาขานี้", bad_request:"คำขอไม่ถูกต้อง"
 };
 const CSV_URL=String(window.SHEET_CSV_URL||"").trim();
 const API_URL=String(window.SHEET_API_URL||"").trim();
@@ -1924,7 +1931,7 @@ async function openDecide(no){
   const byId=new Map((items||[]).map(it=>[it.sid,it]));
   decideState[no]={
     lines:d.lines.map(l=>{
-      const it=byId.get(l.itemId), hist=prices[l.itemId]||[];
+      const it=byId.get(l.itemId), hist=(prices[l.itemId]||[]).filter(h=>h.price>0);
       const defSup=(it&&it.sup)||"", sup=defSup||(hist[0]&&hist[0].sup)||"";
       const x={line:l.line,item:l.item,unit:l.unit,asked:l.qty,ok:true,qty:fmt(l.qty),sup,defSup,list:Number(list[l.itemId])||0,hist,price:"",autoPrice:true};
       const a=autoPrice(x); x.price=a?fmt(a.price):"";
@@ -2218,6 +2225,9 @@ $("#poQ").addEventListener("input",renderPOList);
 $("#poBranchFilter").addEventListener("change",renderPOList);
 $("#page-po").addEventListener("click",async e=>{
   const f=e.target.closest("[data-pof]"); if(f){ poFilter=f.dataset.pof; renderPOList(); return; }
+  const ed=e.target.closest("[data-poedit]"); if(ed){ openPOEdit(ed); return; }
+  if(e.target.closest("[data-poeditclose]")){ closePOEdit(); return; }
+  const sv=e.target.closest("[data-posave]"); if(sv){ savePOEdit(sv); return; }
   if(e.target.closest("[data-print]")){ window.print(); return; }
   const c=e.target.closest("[data-pocancel]");
   if(c){
@@ -2229,6 +2239,119 @@ $("#page-po").addEventListener("click",async e=>{
   }
 });
 const poLink=no=>location.origin+location.pathname.replace(/[^/]*$/,"")+"?po="+encodeURIComponent(no);   /* QR always opens the main page */
+
+/* ---------- แก้ไขใบสั่งซื้อ / ใบเบิก (ฝ่ายจัดซื้อ) ---------- */
+let poEd=null;
+async function openPOEdit(btn){
+  if(!poNow) return;
+  if(apiRev<7){ say("#poViewMsg","ต้องอัปเดตโค้ด Apps Script ก่อน ถึงจะแก้ไขใบสั่งซื้อได้","warn"); return; }
+  /* read the slip again first: a branch may have received goods since the page opened */
+  btn.disabled=true;
+  const tr=isTR(poNow.doc.no);
+  const [fresh,pj]=await Promise.all([call("po_get",{no:poNow.doc.no}),tr?Promise.resolve({ok:false}):call("prices",{ids:[...new Set(poNow.doc.lines.map(l=>l.itemId))]})]);
+  btn.disabled=false;
+  if(!fresh.ok){ say("#poViewMsg",errText(fresh),"warn"); return; }
+  poNow=fresh; $("#poSheet").innerHTML=poSheetHTML(fresh);
+  if(fresh.doc.status==="ยกเลิก"){ say("#poViewMsg","ใบนี้ยกเลิกแล้ว แก้ไม่ได้","warn"); return; }
+  const d=fresh.doc, byId=new Map((items||[]).map(it=>[it.sid,it]));
+  const prices=pj.ok?pj.prices||{}:{}, list=pj.ok?pj.list||{}:{};
+  poEd={no:d.no,tr,sup:str(d.sup),due:str(d.due),vat:fmt(Number(d.vat)||0),note:str(d.note),
+    lines:d.lines.map(l=>{
+      const it=byId.get(l.itemId);
+      const x={line:l.line,item:l.item,unit:l.unit,itemId:l.itemId,oldQty:Number(l.qty)||0,qty:fmt(l.qty),price:fmt(Number(l.price)||0),
+        received:Number(l.received)||0,cancelled:l.status==="ยกเลิก",cancel:false,hint:"",
+        defSup:(it&&it.sup)||"",list:Number(list[l.itemId])||0,hist:(prices[l.itemId]||[]).filter(h=>h.po!==d.no&&h.price>0),sup:str(d.sup)};
+      if(!tr&&!x.cancelled&&!(Number(l.price)>0)){ const a=autoPrice(x); if(a){ x.price=fmt(a.price); x.hint=a.src==="list"?`ใส่ให้จากราคาตั้งไว้`:`ใส่ให้จากราคาล่าสุด (${thDate(a.date)})`; } }
+      return x;
+    })};
+  renderPOEdit();
+  $("#poEdit").scrollIntoView({block:"start",behavior:"smooth"});
+}
+function closePOEdit(){
+  poEd=null; const box=$("#poEdit");
+  if(box){ box.hidden=true; box.innerHTML=""; }
+  $("#poSheet").hidden=false; $("#poActions").hidden=false;
+}
+function trQtyHint(l){
+  const dlt=(num(l.qty).v||0)-l.oldQty;
+  return dlt>0?`หักสต็อกกลางเพิ่ม ${fmt(dlt)}`:dlt<0?`คืนเข้าสต็อกกลาง ${fmt(-dlt)}`:"";
+}
+function poEdSum(){
+  const s=poEd; let sub=0;
+  for(const l of s.lines) if(!l.cancelled&&!l.cancel) sub+=(num(l.qty).v||0)*(num(l.price).v||0);
+  const vat=num(s.vat).v||0, v=Math.round(sub*vat)/100;
+  return (vat?`<tr><td colspan="4" class="r">รวมเป็นเงิน</td><td class="r">${money(sub)}</td><td></td></tr><tr><td colspan="4" class="r">VAT ${fmt(vat)}%</td><td class="r">${money(v)}</td><td></td></tr>`:"")+
+    `<tr class="grand"><td colspan="4" class="r">รวมทั้งสิ้น (บาท)</td><td class="r">${money(sub+v)}</td><td></td></tr>`;
+}
+function renderPOEdit(){
+  const s=poEd, box=$("#poEdit"); if(!s){ closePOEdit(); return; }
+  box.hidden=false; $("#poSheet").hidden=true; $("#poActions").hidden=true;
+  box.innerHTML=`<h3>แก้ไข${s.tr?"ใบเบิก":"ใบสั่งซื้อ"} ${esc(s.no)}</h3>
+    <p class="muted">${s.tr?"แก้จำนวนได้ ระบบจะหักหรือคืนสต็อกกลางตามส่วนต่างให้":"เติมหรือแก้ราคา จำนวน ผู้ขาย กำหนดส่ง VAT และหมายเหตุได้ ราคาจากผู้ขายประจำจะจำไว้ในชีต ราคาสินค้า"} · จำนวนต้องไม่น้อยกว่าที่รับไปแล้ว และยกเลิกได้เฉพาะรายการที่ยังไม่ได้รับของ</p>
+    <div class="opts">
+      ${s.tr?"":`<label style="flex:1 1 200px">ผู้ขาย<input class="cell" data-e="sup" value="${esc(s.sup)}" list="dl-vendor"></label>`}
+      <label>กำหนดส่ง<input class="cell" type="date" data-e="due" value="${esc(s.due)}"></label>
+      ${s.tr?"":`<label>VAT (%)<input class="cell num" data-e="vat" value="${esc(s.vat)}" inputmode="decimal" style="width:80px"></label>`}
+      <label style="flex:2 1 260px">หมายเหตุ (พิมพ์บนใบ)<input class="cell" data-e="note" value="${esc(s.note)}"></label>
+    </div>
+    <div class="linesbox"><table class="lines"><thead><tr><th>รายการ</th><th class="r">รับแล้ว</th><th>จำนวน</th>${s.tr?"":'<th>ราคา/หน่วย</th><th class="r">รวม</th>'}<th>ยกเลิกรายการ</th></tr></thead><tbody>
+    ${s.lines.map(l=>{
+      if(l.cancelled) return `<tr class="off"><td>${esc(l.item)}<div class="muted">${esc(l.unit)}</div></td><td class="r">–</td><td colspan="${s.tr?1:3}"><span class="pill p-none">ยกเลิกแล้ว</span></td><td></td></tr>`;
+      const amt=(num(l.qty).v||0)*(num(l.price).v||0);
+      return `<tr data-el="${l.line}" class="${l.cancel?"off":""}">
+      <td>${esc(l.item)}<div class="muted">${esc(l.unit)}</div></td><td class="r">${l.received?fmt(l.received):"–"}</td>
+      <td><input class="cell num" data-e="qty" value="${esc(l.qty)}" inputmode="decimal" style="width:80px" aria-label="จำนวน ${esc(l.item)}"${l.cancel?" disabled":""}>${s.tr?`<span class="hintprice" data-qhint>${esc(trQtyHint(l))}</span>`:""}</td>
+      ${s.tr?"":`<td><input class="cell num" data-e="price" value="${esc(l.price)}" inputmode="decimal" style="width:100px" placeholder="0.00" aria-label="ราคาต่อหน่วย ${esc(l.item)}"${l.cancel?" disabled":""}>${l.hint?`<span class="hintprice">${esc(l.hint)}</span>`:""}</td>
+      <td class="r" data-amt>${l.cancel?"–":money(amt)}</td>`}
+      <td class="chk">${l.received?'<span class="muted" title="รับของแล้ว ยกเลิกไม่ได้">–</span>':`<input type="checkbox" class="big" data-e="cancel"${l.cancel?" checked":""} aria-label="ยกเลิก ${esc(l.item)}">`}</td></tr>`; }).join("")}
+    </tbody>${s.tr?"":`<tfoot data-esum>${poEdSum()}</tfoot>`}</table></div>
+    <div class="docactions">
+      <button type="button" class="btn primary" data-posave>บันทึกการแก้ไข</button>
+      <button type="button" class="btn ghost" data-poeditclose>ยกเลิก</button>
+      <p class="msgline" data-emsg role="status" aria-live="polite"></p>
+    </div>`;
+}
+function onPOEditInput(e){
+  const el=e.target.closest("[data-e]"), s=poEd; if(!el||!s) return;
+  const k=el.dataset.e, tr=el.closest("[data-el]");
+  if(tr){
+    const l=s.lines.find(x=>String(x.line)===tr.dataset.el); if(!l) return;
+    if(k==="cancel"){ l.cancel=el.checked; renderPOEdit(); return; }
+    l[k]=el.value;
+    if(k==="price"&&l.hint){ l.hint=""; const hs=tr.querySelector(".hintprice"); if(hs) hs.remove(); }
+    const a=tr.querySelector("[data-amt]"); if(a) a.textContent=money((num(l.qty).v||0)*(num(l.price).v||0));
+    const h=tr.querySelector("[data-qhint]"); if(h) h.textContent=trQtyHint(l);
+  }else s[k]=el.value;
+  const f=$("#poEdit [data-esum]"); if(f) f.innerHTML=poEdSum();
+}
+async function savePOEdit(btn){
+  const s=poEd; if(!s) return;
+  const m=t=>say("#poEdit [data-emsg]",t,"warn");
+  const open=s.lines.filter(l=>!l.cancelled);
+  if(!open.some(l=>!l.cancel)) return m("ยกเลิกทุกรายการไม่ได้ ถ้าจะยกเลิกทั้งใบ ให้กดยกเลิกการแก้ แล้วใช้ปุ่มยกเลิกของใบ");
+  for(const l of open){
+    if(l.cancel) continue;
+    const q=num(l.qty);
+    if(!(q.v>0)) return m(`จำนวนของ ${l.item} ต้องมากกว่า 0`);
+    if(q.v<l.received) return m(`${l.item} รับไปแล้ว ${fmt(l.received)} จำนวนต้องไม่น้อยกว่านี้`);
+    if(!s.tr){ const p=num(l.price); if(!p.ok||(p.v||0)<0) return m(`ราคาของ ${l.item} ต้องเป็นตัวเลข`); }
+  }
+  if(!s.tr&&!s.sup.trim()) return m("ต้องใส่ชื่อผู้ขาย");
+  if(!s.tr){ const v=num(s.vat); if(!v.ok||(v.v||0)<0||(v.v||0)>100) return m("VAT ต้องเป็นตัวเลข 0–100"); }
+  const cancels=open.filter(l=>l.cancel);
+  if(cancels.length&&!armed(btn,`กดอีกครั้งเพื่อบันทึกและยกเลิก ${cancels.length} รายการ`)) return m(`จะยกเลิก: ${cancels.map(l=>l.item).join(", ")} · สาขาจะเห็นว่ารายการนี้ไม่อนุมัติ`);
+  btn.disabled=true; say("#poEdit [data-emsg]","กำลังบันทึก…");
+  const j=await call("po_update",{no:s.no,sup:s.sup.trim(),due:s.due,vat:s.vat,note:s.note.trim(),
+    lines:open.map(l=>({line:l.line,qty:l.qty.trim(),price:s.tr?"":l.price.trim(),cancel:l.cancel}))});
+  btn.disabled=false;
+  if(!j.ok) return m(errText(j));
+  const no=s.no, tr=s.tr;
+  await showPO(no,true);
+  say("#poViewMsg",`บันทึกการแก้ไข ${no} แล้ว${j.learned?` · จำราคาใหม่ในชีต ราคาสินค้า ${j.learned} รายการ`:""}${tr?" · ปรับสต็อกกลางตามจำนวนที่แก้แล้ว":""} · ถ้าส่งใบเดิมไปแล้ว ให้พิมพ์ใบนี้ส่งใหม่อีกครั้ง`,"ok");
+  updateBadges(); if(tr) load();
+}
+$("#poEdit").addEventListener("input",onPOEditInput);
+$("#poEdit").addEventListener("change",e=>{ if(e.target.matches('[data-e="cancel"],[data-e="due"]')) onPOEditInput(e); });
 function trSheetHTML(P){
   const d=P.doc, s=P.settings||{}, from=P.supplier||{}, br=P.branch||{};
   const lines=d.status==="ยกเลิก"?d.lines:live(d);
@@ -2276,6 +2399,7 @@ function poSheetHTML(P){
   </footer>`;
 }
 async function showPO(no,quiet){
+  closePOEdit();
   if(!quiet) say("#poViewMsg","");
   $("#poSheet").innerHTML='<p class="msgline">กำลังโหลดใบสั่งซื้อ…</p>'; $("#poActions").innerHTML="";
   const j=await call("po_get",{no});
@@ -2285,6 +2409,7 @@ async function showPO(no,quiet){
   $("#poSheet").innerHTML=poSheetHTML(j);
   $("#poActions").innerHTML=`<button type="button" class="btn primary" data-print>พิมพ์ / บันทึก PDF</button>`+
     (canReceive(d)?`<a class="btn" href="#receive/${encodeURIComponent(d.no)}">รับของ</a>`:"")+
+    (isAdmin()&&d.status!=="ยกเลิก"?`<button type="button" class="btn" data-poedit>แก้ไข${isTR(d.no)?"ใบเบิก":" PO"}</button>`:"")+
     (isAdmin()&&d.status!=="ยกเลิก"&&!received?`<button type="button" class="btn danger" data-pocancel="${esc(d.no)}">${isTR(d.no)?"ยกเลิกใบเบิก (คืนของเข้าสต็อกกลาง)":"ยกเลิก PO"}</button>`:"");
   document.title=`${d.no} · ${isTR(d.no)?"ใบเบิกสินค้า":"ใบสั่งซื้อ"}`;
 }
