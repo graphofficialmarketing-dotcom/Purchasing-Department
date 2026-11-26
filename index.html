@@ -527,7 +527,8 @@ tr.item.deleted .cell:disabled{text-decoration:line-through;opacity:1}
 .ctmove.in .k,.ctmove.in .qn{color:var(--ok)}
 .ctmove.out .k{color:var(--low)}
 .ctmove .qn{font-weight:700;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
-.ctmove .who{grid-column:3/-1;color:var(--muted);font-size:13px}
+.ctmove .who{grid-column:3/-1;color:var(--muted);font-size:13px;display:block;margin:0;padding:0}   /* not the header's .who */
+.ctmove .who b{color:var(--ink,#141414);font-weight:600}
 .ctmove .pill{grid-column:3/-1;justify-self:start}
 .ctmove.cancelled{opacity:.6}
 .ctmove.cancelled .qn{text-decoration:line-through}
@@ -566,6 +567,24 @@ tr.item.deleted .cell:disabled{text-decoration:line-through;opacity:1}
 /* nav links for purchasing: main page → PR approvals (pr.html), pr.html → main page */
 .who .navlink{text-decoration:none;display:inline-flex;gap:6px;align-items:center;white-space:nowrap}
 @media (max-width:560px){ .who:has(.navlink:not([hidden])) #whoLabel{display:none} }
+
+/* เข้าระบบด้วยชื่อผู้ใช้ */
+.f-user{flex:0 0 200px}
+.who .wunit{font-weight:400;opacity:.8}
+/* เบิกเข้า-ออก */
+.mvrow.cnt .k{color:var(--muted)}
+.mvrow.out .qn{color:var(--low)}
+.mvrow .qn small{font-weight:400;color:var(--muted)}
+.mvrow .kph{display:none}
+#mvBar .ctdates{display:inline-flex;gap:8px;flex-wrap:wrap}
+#mvBar .ctdates label{display:inline-flex;gap:6px;align-items:center;font-size:13px;color:var(--muted)}
+#mvBar .ctdates .cell{min-width:0;width:auto}
+@media (max-width:760px){
+  .mvrow .kph{display:inline-block;font-size:11px;font-weight:600;border-radius:6px;padding:0 6px;margin-right:6px;background:var(--none-bg);color:var(--none)}
+  .mvrow.in .kph{background:var(--ok-bg);color:var(--ok)}
+  .mvrow.out .kph{background:var(--low-bg);color:var(--low)}
+  .f-user,#loginForm .f-pw{flex:1 1 100%}
+}
 </style>
 </head>
 <body>
@@ -590,6 +609,7 @@ tr.item.deleted .cell:disabled{text-decoration:line-through;opacity:1}
       <a href="#pr" data-page="pr"><span id="prTab">ขอซื้อ (PR)</span> <span class="badge" id="bdgPR" hidden></span></a>
       <a href="#po" data-page="po">สั่งซื้อ (PO)</a>
       <a href="#receive" data-page="receive">รับของ <span class="badge" id="bdgRC" hidden></span></a>
+      <a href="#moves" data-page="moves">เบิกเข้า-ออก</a>
       <a href="#history" data-page="history">ประวัติรับของ</a>
     </div>
     <div class="who">
@@ -609,6 +629,7 @@ tr.item.deleted .cell:disabled{text-decoration:line-through;opacity:1}
       <h2>เข้าสู่ระบบ</h2>
       <p class="hint" id="loginHint">ใส่รหัสของสาขา หรือรหัสฝ่ายจัดซื้อ · คนที่ไม่มีรหัสดูตารางสต็อกได้อย่างเดียว</p>
       <div class="formgrid">
+        <label class="f-user"><span>ชื่อผู้ใช้</span><input id="userInput" class="cell" autocomplete="username" autocapitalize="none" spellcheck="false"></label>
         <label class="f-pw"><span>รหัสผ่าน</span><input id="pwInput" class="cell" type="password" autocomplete="current-password"></label>
         <label class="check"><input type="checkbox" id="pwRemember" checked> จำไว้ในเครื่องนี้</label>
         <button type="submit" class="btn primary" id="btnLoginGo">เข้าสู่ระบบ</button>
@@ -783,6 +804,45 @@ tr.item.deleted .cell:disabled{text-decoration:line-through;opacity:1}
   </div>
 
   <!-- ===================== ประวัติรับของ ===================== -->
+  <!-- ===================== เบิกเข้า-ออก ===================== -->
+  <div class="page" id="page-moves" hidden>
+    <div class="pagehead">
+      <div><h2>เบิกเข้า-ออก</h2><p class="sub" id="mvSub"></p></div>
+      <div class="headbtns" id="mvBtns" hidden><button type="button" class="btn" id="btnMvIn">+ เบิกเข้า</button><button type="button" class="btn primary" id="btnMvOut">− เบิกออก</button></div>
+    </div>
+    <div class="gate" id="mvGate" hidden><p>เข้าสู่ระบบด้วยชื่อผู้ใช้ เพื่อบันทึกและดูการเบิกเข้า-ออกของสาขา</p><button type="button" class="btn primary" data-login>เข้าสู่ระบบ</button></div>
+    <section class="panel" id="mvForm" aria-label="บันทึกเบิกเข้า-ออก" hidden>
+      <div class="picker">
+        <h2 id="mvFormTitle">เบิกออก</h2>
+        <div class="prtop">
+          <label class="f-branch" id="mvBranchWrap" hidden><span>สาขา *</span><select id="mvFormBranch" class="cell"></select></label>
+          <label style="flex:1 1 260px"><span>เหตุผล / หมายเหตุ</span><input id="mvNote" class="cell" placeholder="เช่น ใช้ในบาร์, ขายหน้าร้าน, ของเสีย/หมดอายุ"></label>
+        </div>
+        <input id="mvQ" class="cell" type="search" placeholder="ค้นหาสินค้า เช่น นม, เมล็ดกาแฟ, เสื้อ" aria-label="ค้นหาสินค้า">
+        <div class="chips" id="mvCats" role="group" aria-label="หมวดสินค้า"></div>
+        <div class="picklist" id="mvPick" aria-label="ผลการค้นหาสินค้า"></div>
+        <div class="cart">
+          <h3>รายการที่จะบันทึก <small id="mvCount"></small></h3>
+          <div id="mvCart"></div>
+        </div>
+        <div class="formactions">
+          <button type="button" class="btn primary" id="btnMvSave">บันทึก</button>
+          <button type="button" class="btn ghost" id="btnMvClose">ปิด</button>
+          <p class="msgline" id="mvMsg" role="status" aria-live="polite"></p>
+        </div>
+      </div>
+    </section>
+    <div class="filterbar" id="mvBar" hidden>
+      <select id="mvBranch" class="cell" aria-label="สาขา" hidden></select>
+      <div class="chips" id="mvKinds" role="group" aria-label="ประเภท"></div>
+      <select id="mvCat" class="cell" aria-label="หมวดสินค้า"><option value="all">ทุกหมวด</option></select>
+      <span class="ctdates"><label>ตั้งแต่ <input id="mvFrom" class="cell" type="date"></label><label>ถึง <input id="mvTo" class="cell" type="date"></label></span>
+      <input id="mvQList" class="cell" type="search" placeholder="ค้นหาสินค้า เลขที่ หรือชื่อคน" aria-label="ค้นหาประวัติ">
+    </div>
+    <p class="msgline" id="mvListMsg" role="status" aria-live="polite"></p>
+    <div id="mvList"></div>
+  </div>
+
   <div class="page" id="page-history" hidden>
     <div class="pagehead"><div><h2>ประวัติรับของ</h2><p class="sub">วันไหน สาขาไหน ได้รับสินค้าอะไรบ้าง พร้อมรูปใบส่งของ</p></div></div>
     <div class="gate" id="hGate" hidden><p>เข้าสู่ระบบเพื่อดูประวัติรับของ</p><button type="button" class="btn primary" data-login>เข้าสู่ระบบ</button></div>
@@ -800,7 +860,7 @@ tr.item.deleted .cell:disabled{text-decoration:line-through;opacity:1}
 </main>
 
 <script>
-window.APP_PAGES=["stock","central","po","history"]; /* ขอซื้อและรับของอยู่ที่ pr.html */
+window.APP_PAGES=["stock","central","po","moves","history"]; /* ขอซื้อและรับของอยู่ที่ pr.html */
 /* Minimal QR Code generator: byte mode, error correction level M, versions 1–10.
    Follows the structure of Project Nayuki's QR Code generator (MIT). makeQR(text) → {size, dark(x,y)}; qrSVG(text, px) → <svg>. */
 const QR=(()=>{
@@ -932,7 +992,8 @@ const TILES=[
 const PR_CLS={"รออนุมัติ":"p-low","อนุมัติ":"p-ok","อนุมัติบางรายการ":"p-ok","ไม่อนุมัติ":"p-out","ยกเลิก":"p-none"};
 const PO_CLS={"รอส่งของ":"p-low","รับบางส่วน":"p-info","รับครบ":"p-ok","ยกเลิก":"p-none"};
 const ERR={
-  network:"เชื่อมต่อไม่ได้ ตรวจอินเทอร์เน็ตแล้วลองใหม่", wrong_password:"รหัสผ่านไม่ถูกต้อง",
+  network:"เชื่อมต่อไม่ได้ ตรวจอินเทอร์เน็ตแล้วลองใหม่", wrong_password:"ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง",
+  no_unit:"บัญชีนี้ยังไม่ได้ระบุ สาขา/ฝ่าย ในชีต ผู้ใช้ แจ้งฝ่ายจัดซื้อให้เลือกก่อน",
   locked:"ใส่รหัสผิดหลายครั้งเกินไป รอประมาณ 10 นาทีแล้วลองใหม่", forbidden:"รหัสนี้ไม่มีสิทธิ์ทำรายการนี้",
   not_found:"ไม่พบเอกสารนี้", already_decided:"ใบขอซื้อนี้ถูกพิจารณาหรือยกเลิกไปแล้ว", has_receipts:"PO นี้รับของไปแล้ว ยกเลิกไม่ได้",
   po_cancelled:"PO นี้ถูกยกเลิกแล้ว", empty:"ยังไม่มีรายการ ใส่จำนวนอย่างน้อย 1 รายการ", bad_qty:"จำนวนต้องเป็นตัวเลข",
@@ -946,7 +1007,7 @@ const API_URL=String(window.SHEET_API_URL||"").trim();
 const EDIT_URL=String(window.SHEET_EDIT_URL||"https://docs.google.com/spreadsheets/d/1fcB6b6RUewa_EGMoUudJuBJ2jZ1Zr4Bz_ng063DlZu0/edit").trim();
 const FALLBACK_FILE="data/items.json";
 const PW_KEY="quarter-web-pw", DRAFT_KEY="quarter-web-draft-v2", FOLD_KEY="quarter-web-fold-v1", VIEW_KEY="quarter-web-view",
-  NAME_KEY="quarter-web-name", CART_KEY="quarter-web-pr-cart";
+  NAME_KEY="quarter-web-name", CART_KEY="quarter-web-pr-cart", USER_KEY="quarter-web-user";
 const FIELDS=["kind","code","item","unit","sup","type"];              /* text columns edited in the table */
 const ROWKEYS=["cat","kind","code","item","unit","sup","type"];
 const LABEL={kind:"ชนิดสินค้า",code:"รหัสเลขที่",item:"รายละเอียดสินค้า",unit:"หน่วยนับ",sup:"ผู้ส่งสินค้า",type:"ประเภทสินค้า"};
@@ -1003,7 +1064,7 @@ let items=null, version=null, source="", transport="direct", legacy=false, apiRe
 let branchList=[], stockCodes=[], deptList=[];   /* deptList: ฝ่ายผลิต [{code,name,kinds,nk}] (Apps Script rev 9) */
 let view=store.raw(VIEW_KEY);            /* "" = total of all branches, else a branch code */
 let me=null;                             /* who is signed in: {role, branch, branches, settings, suppliers} */
-let pw=store.raw(PW_KEY);
+let pw=store.raw(PW_KEY), uname=store.raw(USER_KEY);   /* uname = ชื่อผู้ใช้ (เว้นว่าง = รหัสสาขา/รหัสฝ่ายจัดซื้อแบบเดิม) */
 let cats=KNOWN.map(c=>({...c,cls:c.key}));
 let draft={e:{},a:[],d:[]};              /* unsaved table edits: e = {id:{o:snapshot,v:{field|"s:CODE":value}}}, a = new rows, d = deleted rows */
 let editing=false, saving=false, invalid=new Set();
@@ -1055,7 +1116,7 @@ async function apiPost(body){
 async function call(action,data){
   if(!API_URL) return {ok:false,error:"network"};
   let j=null;
-  try{ j=await apiPost(Object.assign({action,password:pw},data||{})); }catch(e){ return {ok:false,error:"network"}; }
+  try{ j=await apiPost(Object.assign({action,password:pw},uname?{user:uname}:{},data||{})); }catch(e){ return {ok:false,error:"network"}; }
   if(j&&!j.ok&&j.error==="wrong_password"&&pw) signOut("รหัสผ่านถูกเปลี่ยน เข้าสู่ระบบใหม่อีกครั้ง");
   return j||{ok:false,error:"network"};
 }
@@ -1064,12 +1125,15 @@ async function call(action,data){
 let afterLogin=null;
 function askLogin(hint,then){
   afterLogin=then||null;
-  $("#loginHint").textContent=hint||(PR_ONLY?"ใส่รหัสของสาขา เพื่อเปิดใบขอซื้อ ดูสถานะ และรับของ":HQ_ONLY?"ใส่รหัสของคลังกลาง (HQ) ฝ่ายผลิต หรือรหัสฝ่ายจัดซื้อ":"ใส่รหัสของสาขา หรือรหัสฝ่ายจัดซื้อ · คนที่ไม่มีรหัสดูตารางสต็อกได้อย่างเดียว");
+  $("#loginHint").textContent=(hint||(PR_ONLY?"ใส่ชื่อผู้ใช้และรหัสผ่านของคุณ เพื่อเปิดใบขอซื้อ รับของ และเบิกเข้า-ออก":HQ_ONLY?"ใส่ชื่อผู้ใช้และรหัสผ่าน ของคลังกลาง (HQ) ฝ่ายผลิต หรือฝ่ายจัดซื้อ":"ใส่ชื่อผู้ใช้และรหัสผ่านของคุณ · คนที่ไม่มีรหัสดูตารางสต็อกได้อย่างเดียว"))+
+    " · ยังไม่มีชื่อผู้ใช้: เว้นช่องชื่อผู้ใช้ว่าง แล้วใส่รหัสแบบเดิม";
   $("#loginPanel").hidden=false; $("#loginMsg").textContent=""; $("#pwInput").value="";
-  window.scrollTo({top:0}); $("#pwInput").focus();
+  if(!$("#userInput").value) $("#userInput").value=store.raw(USER_KEY);
+  window.scrollTo({top:0}); ($("#userInput").value?$("#pwInput"):$("#userInput")).focus();
 }
+const unitText=()=>!me?"":isAdmin()?"ฝ่ายจัดซื้อ":isHQ()?"ส่วนกลาง (คลังกลาง)":isDeptUser()?me.branch.name:"สาขา "+me.branch.name;
 function updateWho(){
-  $("#whoLabel").innerHTML=me?`<b>${esc(isAdmin()?"ฝ่ายจัดซื้อ":isHQ()?"ส่วนกลาง (คลังกลาง)":isDeptUser()?me.branch.name:"สาขา "+me.branch.name)}</b>`:"";
+  $("#whoLabel").innerHTML=!me?"":me.user?`<b>${esc(me.user.name)}</b> <span class="wunit">· ${esc(unitText())}</span>`:`<b>${esc(unitText())}</b>`;
   $("#ctTab").textContent=isDeptUser()?"สต็อกของฝ่าย":"สต็อกกลาง";
   $("#prTab").textContent=isDeptUser()&&apiRev>=9?"คำขอจากสาขา":"ขอซื้อ (PR)";
   $("#btnLogin").hidden=!!me; $("#btnLogout").hidden=!me;
@@ -1083,7 +1147,7 @@ function onAuthChanged(){
   fillViewSelect(); render(); updateTools(); updateBadges();
 }
 function signOut(msg){
-  pw=""; me=null; store.del(PW_KEY);
+  pw=""; uname=""; me=null; store.del(PW_KEY); store.del(USER_KEY);
   if(editing){ editing=false; invalid=new Set(); }
   onAuthChanged(); route();
   if(msg) notice(msg);
@@ -1094,16 +1158,16 @@ $("#btnLoginCancel").addEventListener("click",()=>{ $("#loginPanel").hidden=true
 document.addEventListener("click",e=>{ if(e.target.closest("[data-login]")) askLogin(); });
 $("#loginForm").addEventListener("submit",async e=>{
   e.preventDefault();
-  const p=$("#pwInput").value, msg=$("#loginMsg");
+  const p=$("#pwInput").value, u=$("#userInput").value.trim(), msg=$("#loginMsg");
   if(!p){ msg.textContent="ใส่รหัสผ่านก่อน"; msg.className="formmsg warn"; return; }
   if(!API_URL){ msg.textContent="ยังไม่ได้ใส่ลิงก์ Apps Script ในไฟล์ config.js"; msg.className="formmsg warn"; return; }
   $("#btnLoginGo").disabled=true; msg.textContent="กำลังตรวจรหัสผ่าน…"; msg.className="formmsg";
   let j=null;
-  try{ j=await apiPost({action:"check",password:p}); }catch(err){ j={ok:false,error:"network"}; }
+  try{ j=await apiPost(Object.assign({action:"check",password:p},u?{user:u}:{})); }catch(err){ j={ok:false,error:"network"}; }
   $("#btnLoginGo").disabled=false;
   if(j&&j.ok&&j.role){
-    pw=p; me=j; setDepts(j.depts);
-    if($("#pwRemember").checked) store.set(PW_KEY,p); else store.del(PW_KEY);
+    pw=p; uname=u; me=j; setDepts(j.depts);
+    if($("#pwRemember").checked){ store.set(PW_KEY,p); if(u) store.set(USER_KEY,u); else store.del(USER_KEY); } else { store.del(PW_KEY); store.del(USER_KEY); }
     $("#loginPanel").hidden=true; msg.textContent=""; setMsg(""); notice("");
     onAuthChanged(); maybeRestore();
     const f=afterLogin; afterLogin=null;
@@ -1116,9 +1180,9 @@ $("#loginForm").addEventListener("submit",async e=>{
 async function restoreSession(){
   if(!pw||!API_URL) return;
   let j=null;
-  try{ j=await apiPost({action:"check",password:pw}); }catch(e){ return; }
+  try{ j=await apiPost(Object.assign({action:"check",password:pw},uname?{user:uname}:{})); }catch(e){ return; }
   if(j&&j.ok&&j.role){ me=j; setDepts(j.depts); onAuthChanged(); maybeRestore(); }
-  else if(j&&j.error==="wrong_password"){ pw=""; store.del(PW_KEY); }
+  else if(j&&j.error==="wrong_password"){ pw=""; uname=""; store.del(PW_KEY); store.del(USER_KEY); }
 }
 async function updateBadges(){
   const pr=$("#bdgPR"), rc=$("#bdgRC"), ct=$("#bdgCT");
@@ -1149,7 +1213,7 @@ async function updateBadges(){
     const n=open.filter(d=>isXfer(d.no)&&srcOf(d)===unit&&d.status==="รอส่งของ").length; ct.textContent=n; ct.hidden=!n; ct.title=n?`ใบส่งของรอส่ง ${n} ใบ`:"";
   }else ct.hidden=true;
 }
-const PAGES={stock:()=>{}, central:enterCentral, pr:enterPR, po:enterPO, receive:enterReceive, history:enterHistory};
+const PAGES={stock:()=>{}, central:enterCentral, pr:enterPR, po:enterPO, receive:enterReceive, history:enterHistory, moves:enterMoves};
 let currentPage="stock";
 const TITLE=document.title;
 function route(){
@@ -2336,7 +2400,9 @@ function openPRForm(){
   const sel=$("#prBranch");
   if(isAdmin()){ branchOptions(sel,true,"เลือกสาขา"); sel.disabled=false; if(prCart.branch) sel.value=prCart.branch; }
   else { sel.innerHTML=`<option value="${esc(me.branch.code)}">${esc(me.branch.name)}</option>`; sel.disabled=true; }
-  if(!$("#prBy").value) $("#prBy").value=store.raw(NAME_KEY);
+  const by=$("#prBy");   /* เข้าด้วยชื่อผู้ใช้: ชื่อผู้ขอ = ชื่อคนนั้น แก้ไม่ได้ */
+  if(me.user){ by.value=me.user.name; by.readOnly=true; } else { by.readOnly=false; if(!by.value||by.dataset.user) by.value=store.raw(NAME_KEY); }
+  by.dataset.user=me.user?"1":"";
   const today=addDays(0);
   $("#prDate").max=today; $("#prDate").value=prCart.date&&prCart.date<=today?prCart.date:today;
   $("#prNeed").min=$("#prDate").value; if(prCart.needBy) $("#prNeed").value=prCart.needBy;
@@ -2435,7 +2501,7 @@ $("#btnPRSend").addEventListener("click",async()=>{
   const j=await call("pr_create",{branch:code,by,date,needBy:need,lines});
   prBusy=false; $("#btnPRSend").disabled=false;
   if(!j.ok){ say("#prMsg",errText(j),"warn"); return; }
-  if(by) store.set(NAME_KEY,by);
+  if(by&&!me.user) store.set(NAME_KEY,by);
   prCart={lines:{}}; saveCart(); $("#prNeed").value="";
   closePRForm(); if(isDeptUser()&&apiRev>=9) prFilter="out"; else if(!PR_ONLY) prFilter="wait";
   await loadPR();
@@ -2779,7 +2845,7 @@ function renderReceive(){
   <section class="panel">
     <div class="prtop">
       <label style="flex:1 1 220px"><span>เลขที่ใบส่งของ / ใบกำกับภาษีของผู้ขาย</span><input id="rcDN" class="cell" autocomplete="off" placeholder="ถ้ามี"></label>
-      <label style="flex:1 1 200px"><span>ชื่อผู้รับของ</span><input id="rcBy" class="cell" autocomplete="name" value="${esc(store.raw(NAME_KEY))}"></label>
+      <label style="flex:1 1 200px"><span>ชื่อผู้รับของ</span><input id="rcBy" class="cell" autocomplete="name" value="${esc(me&&me.user?me.user.name:store.raw(NAME_KEY))}"${me&&me.user?" readonly":""}></label>
     </div>
     <div class="photo" style="margin-top:12px">
       <input type="file" id="rcPhoto" accept="image/*" capture="environment" hidden>
@@ -2836,7 +2902,7 @@ async function saveReceive(btn){
   const j=await call("gr_create",{po:rc.doc.no,dn:$("#rcDN").value.trim(),by,lines:lines.map(l=>({line:l.line,qty:l.qty,note:l.note})),photo:rc.photo?{type:"image/jpeg",data:rc.photo}:null});
   rcBusy=false; btn.disabled=false;
   if(!j.ok){ say("#rcMsg",errText(j),"warn"); return; }
-  if(by) store.set(NAME_KEY,by);
+  if(by&&!(me&&me.user)) store.set(NAME_KEY,by);
   const d=rc.doc, gotLines=got.map(g=>{ const l=d.lines.find(x=>x.line===g.line); return `<li>${esc(l.item)} <b>${fmt(g.qty)}</b> ${esc(l.unit)}${g.note?` · ${esc(g.note)}`:""}</li>`; }).join("");
   $("#rcForm").innerHTML=`<div class="rcok"><h3>บันทึกการรับของแล้ว · ${esc(j.no)}</h3>
     <p>${esc(d.no)} จาก ${esc(d.sup)} ส่งที่ ${esc(d.branchName)} · เพิ่มเข้าสต็อกของสาขาแล้ว${j.photo?` · <a href="${esc(j.photo)}" target="_blank" rel="noopener">ดูรูปใบส่งของ</a>`:""}</p>
@@ -2890,6 +2956,161 @@ $("#hQ").addEventListener("input",renderHistory);
 /* ======================================================================
    start
    ====================================================================== */
+/* ======================================================================
+   เบิกเข้า-ออก: สาขาบันทึกของออก (ใช้/ขาย/เสีย) และของเข้าที่ไม่ได้มาจาก PO · ดูประวัติพร้อมเวลาและชื่อคนทำ
+   ====================================================================== */
+let mvData=[], mvKind="all", mvBusy=false, mvForm=null, mvCat="all";
+const MV_KINDS=[["all","ทั้งหมด"],["เบิกออก","เบิกออก"],["เบิกเข้า","เบิกเข้า"],["รับของ","รับของ"],["นับยอด","นับ / แก้ยอด"],["ส่งออก","ส่งออก (ใบส่งของ)"]];
+const MV_CLS={"เบิกออก":"out","ส่งออก":"out","เบิกเข้า":"in","รับของ":"in","นับยอด":"cnt","แก้ยอด":"cnt"};
+const mvIs=(m,k)=>k==="all"||(k==="นับยอด"?(m.kind==="นับยอด"||m.kind==="แก้ยอด"):m.kind===k);
+const mvCode=()=>isAdmin()?$("#mvBranch").value:myCode();
+const mvFormCode=()=>isAdmin()?$("#mvFormBranch").value:myCode();
+async function enterMoves(){
+  const gate=!me||legacy, starting=!booted;
+  $("#mvGate").hidden=!gate||legacy||starting; $("#mvBar").hidden=gate; $("#mvBtns").hidden=gate||apiRev<12;
+  if(gate){
+    $("#mvList").innerHTML=""; $("#mvForm").hidden=true; $("#mvSub").textContent="";
+    if(PR_ONLY&&!starting&&!legacy&&$("#loginPanel").hidden) askLogin();
+    return;
+  }
+  if(apiRev<12){ $("#mvList").innerHTML=""; say("#mvListMsg","ต้องอัปเดตโค้ด Apps Script ก่อน จึงจะบันทึกและดูการเบิกเข้า-ออกได้","warn"); return; }
+  const sel=$("#mvBranch");
+  sel.hidden=!isAdmin();
+  if(isAdmin()) branchOptions(sel,true,"เลือกสาขา");
+  if(!$("#mvFrom").value) $("#mvFrom").value=addDays(-6);
+  if(!$("#mvTo").value) $("#mvTo").value=addDays(0);
+  $("#mvSub").textContent=`${isAdmin()?"ของเข้า-ออกของสาขาที่เลือก":"ของเข้า-ออกของ"+unitText()} พร้อมเวลาและชื่อคนบันทึก · เบิกออก = เอาของออกไปใช้ ขาย หรือของเสีย · เบิกเข้า = ของเข้าที่ไม่ได้มาจากใบสั่งซื้อ/ใบส่งของ`;
+  fillMvCats();
+  await loadMoves();
+}
+function fillMvCats(){
+  if(!items) return;
+  const usable=(items||[]).filter(it=>it.sid&&it.item); assignCats(usable);
+  const sel=$("#mvCat"), keep=sel.value||"all";
+  sel.innerHTML='<option value="all">ทุกหมวด</option>'+cats.filter(c=>usable.some(it=>it.ck===c.key)).map(c=>`<option value="${esc(c.key)}">${esc(c.name)}</option>`).join("");
+  sel.value=[...sel.options].some(o=>o.value===keep)?keep:"all";
+}
+async function loadMoves(quiet){
+  const code=mvCode();
+  if(!code){ mvData=[]; $("#mvKinds").innerHTML=""; $("#mvList").innerHTML='<div class="empty-card">เลือกสาขาที่จะดู</div>'; return; }
+  if(!quiet) say("#mvListMsg","กำลังโหลดประวัติเข้า-ออก…");
+  const j=await call("moves",{code,from:$("#mvFrom").value,to:$("#mvTo").value});
+  if(code!==mvCode()) return;
+  if(!j.ok){ say("#mvListMsg",errText(j),"warn"); return; }
+  mvData=j.moves||[]; if(!quiet) say("#mvListMsg",""); renderMoves();
+}
+function renderMoves(){
+  if(!$("#mvBar")||$("#page-moves").hidden) return;
+  const byId=new Map((items||[]).map(it=>[it.sid,it]));
+  const cat=$("#mvCat").value||"all", q=$("#mvQList").value.trim().toLowerCase();
+  const base=mvData.filter(m=>{ if(cat==="all") return true; const it=byId.get(m.itemId); return !!it&&it.ck===cat; });
+  $("#mvKinds").innerHTML=MV_KINDS.filter(([k])=>k!=="ส่งออก"||mvData.some(m=>m.kind==="ส่งออก"))
+    .map(([k,l])=>`<button type="button" class="chip" data-mvk="${esc(k)}" aria-pressed="${mvKind===k}">${l} <em>${base.filter(m=>mvIs(m,k)).length}</em></button>`).join("");
+  const list=base.filter(m=>mvIs(m,mvKind)&&(!q||[m.item,m.no,m.ref,m.by,m.note,m.from,m.to,m.kind].join(" ").toLowerCase().includes(q)));
+  if(!list.length){ $("#mvList").innerHTML='<div class="empty-card">ไม่มีรายการในช่วงวันที่ที่เลือก</div>'; return; }
+  const days=new Map();
+  for(const m of list){ const k=String(m.at).slice(0,10); if(!days.has(k)) days.set(k,[]); days.get(k).push(m); }
+  $("#mvList").innerHTML=[...days].map(([day,ms])=>`<section class="ctday"><h3>${thDay(day)}</h3>${ms.map(mvRow).join("")}</section>`).join("");
+}
+function mvRow(m){
+  const cnt=m.kind==="นับยอด"||m.kind==="แก้ยอด", out=m.kind==="เบิกออก"||m.kind==="ส่งออก", blank=v=>v===""||v==null;
+  const qty=cnt?(blank(m.after)?"ล้างยอด":`นับได้ ${fmt(m.after)} ${esc(m.unit)}`):`${out?"−":"+"}${fmt(Math.abs(Number(m.qty)||0))} ${esc(m.unit)}`;
+  const diff=cnt&&!blank(m.qty)&&Number(m.qty)?` <small>(${Number(m.qty)>0?"+":"−"}${fmt(Math.abs(Number(m.qty)))})</small>`:"";
+  const ref=m.kind==="รับของ"?`${esc(m.no)}${m.ref?` · <a href="${poHref(m.ref)}">${esc(m.ref)}</a>`:""}${m.from?` · จาก ${esc(m.from)}`:""}`:
+    m.kind==="ส่งออก"?`<a href="${poHref(m.no)}">${esc(m.no)}</a> · ให้ ${esc(m.to||"")}${m.status==="ยกเลิก"?" · ยกเลิกแล้ว":""}`:esc(m.no||"");
+  const left=!cnt&&!blank(m.after)?` · เหลือ ${fmt(m.after)}`:"";
+  return `<div class="ctmove mvrow ${MV_CLS[m.kind]||"cnt"}${m.status==="ยกเลิก"?" cancelled":""}"><span class="t">${esc(String(m.at).slice(11,16))}</span>
+    <span class="k">${esc(m.kind)}</span><span class="nm"><span class="kph">${esc(m.kind)}</span>${esc(m.item)}</span>
+    <span class="qn">${qty}${diff}</span>
+    <span class="who">${m.by?`โดย <b>${esc(m.by)}</b> · `:""}${ref}${left}${m.note?` · ${esc(m.note)}`:""}</span></div>`;
+}
+function openMvForm(kind){
+  if(!items){ say("#mvListMsg","รอโหลดรายการสินค้าสักครู่ แล้วกดอีกครั้ง","warn"); return; }
+  mvForm={kind,cart:{}};
+  $("#mvForm").hidden=false;
+  $("#mvFormTitle").textContent=kind==="out"?"เบิกออก · เอาของออกจากสต็อก (ใช้ ขาย หรือของเสีย)":"เบิกเข้า · ของเข้าสต็อกที่ไม่ได้มาจากใบสั่งซื้อ/ใบส่งของ";
+  $("#btnMvSave").textContent=kind==="out"?"บันทึกเบิกออก":"บันทึกเบิกเข้า";
+  $("#mvBranchWrap").hidden=!isAdmin();
+  if(isAdmin()){ const fb=$("#mvFormBranch"); branchOptions(fb,true,"เลือกสาขา"); fb.value=$("#mvBranch").value; }
+  $("#mvNote").value=""; $("#mvQ").value=""; say("#mvMsg","");
+  renderMvPick(); renderMvCart();
+  $("#mvForm").scrollIntoView({block:"start",behavior:"smooth"});
+}
+function closeMvForm(){ mvForm=null; $("#mvForm").hidden=true; }
+function renderMvPick(){
+  if(!mvForm) return;
+  const q=$("#mvQ").value.trim().toLowerCase(), code=mvFormCode();
+  const usable=(items||[]).filter(it=>it.sid&&it.item); assignCats(usable);
+  $("#mvCats").innerHTML=[`<button type="button" class="chip s-all" data-mvc="all" aria-pressed="${mvCat==="all"}"><i></i>ทุกหมวด</button>`]
+    .concat(cats.filter(c=>usable.some(it=>it.ck===c.key)).map(c=>`<button type="button" class="chip ${c.cls}" data-mvc="${esc(c.key)}" aria-pressed="${mvCat===c.key}"><i></i>${esc(c.name)}</button>`)).join("");
+  const list=usable.filter(it=>(mvCat==="all"||it.ck===mvCat)&&(!q||[it.item,it.kind,it.code,it.sup,it.cat].join(" ").toLowerCase().includes(q)));
+  const shown=list.slice(0,60);
+  $("#mvPick").innerHTML=shown.length?shown.map(it=>{
+    const have=code?str((it.stock||{})[code]):"", c=mvForm.cart[it.sid]||"";
+    return `<div class="pickrow${num(c).v>0?" on":""}" data-mvid="${esc(it.sid)}"><div class="nm">${esc(it.item)}<small>${esc([it.kind,it.cat].filter(Boolean).join(" · "))}</small></div>
+      <div class="have">${code?(have!==""?`มี ${esc(have)} ${esc(it.unit)}`:"ยังไม่ได้นับ"):""}</div>
+      <div class="qtybox"><button type="button" class="step" data-mvstep="-1" aria-label="ลด">−</button><input class="cell num" data-mvq value="${esc(c)}" inputmode="decimal" placeholder="0" aria-label="จำนวน ${esc(it.item)}"><button type="button" class="step" data-mvstep="1" aria-label="เพิ่ม">+</button><span class="unit">${esc(it.unit)}</span></div>
+    </div>`; }).join("")+(list.length>shown.length?`<div class="pickrow"><div class="nm"><small>แสดง ${shown.length} จาก ${list.length} รายการ · พิมพ์ค้นหาให้แคบลง</small></div></div>`:""):
+    '<div class="pickrow"><div class="nm"><small>ไม่พบสินค้า ลองพิมพ์คำอื่น</small></div></div>';
+}
+function renderMvCart(){
+  if(!mvForm) return;
+  const byId=new Map((items||[]).map(it=>[it.sid,it])), code=mvFormCode(), out=mvForm.kind==="out";
+  const rows=Object.entries(mvForm.cart).filter(([sid,q])=>byId.has(sid)&&num(q).v>0);
+  $("#mvCount").textContent=rows.length?`${rows.length} รายการ`:"ยังไม่ได้เลือก ใส่จำนวนที่รายการด้านบน";
+  $("#mvCart").innerHTML=rows.length?`<div class="linesbox"><table class="lines"><thead><tr><th>สินค้า</th><th class="r">${out?"เบิกออก":"เบิกเข้า"}</th><th class="r">มีอยู่</th><th class="r">หลังบันทึก</th></tr></thead><tbody>${rows.map(([sid,q])=>{
+    const it=byId.get(sid), p=num(str((it.stock||{})[code])), have=p.ok&&p.v!==null?p.v:null, n=num(q).v||0, after=(have||0)+(out?-n:n);
+    return `<tr><td>${esc(it.item)}</td><td class="r">${fmt(n)} ${esc(it.unit)}</td><td class="r">${have===null?'<span class="muted">ยังไม่นับ</span>':fmt(have)}</td><td class="r${after<0?" short":""}">${fmt(after)}</td></tr>`; }).join("")}</tbody></table></div>`:"";
+}
+function setMvQty(sid,v){ const t=str(v).trim(); if(!t||num(t).v===0) delete mvForm.cart[sid]; else mvForm.cart[sid]=t; }
+async function saveMoves(btn){
+  if(mvBusy||!mvForm) return;
+  const code=mvFormCode(), byId=new Map((items||[]).map(it=>[it.sid,it])), out=mvForm.kind==="out";
+  const bad=Object.entries(mvForm.cart).find(([,q])=>!num(q).ok);
+  if(bad) return say("#mvMsg",`จำนวนของ “${byId.get(bad[0])?byId.get(bad[0]).item:""}” ต้องเป็นตัวเลข`,"warn");
+  const lines=Object.entries(mvForm.cart).filter(([sid,q])=>byId.has(sid)&&num(q).v>0).map(([sid,q])=>({id:sid,qty:str(q).trim()}));
+  if(!code) return say("#mvMsg","เลือกสาขาก่อน","warn");
+  if(!lines.length) return say("#mvMsg","ยังไม่ได้ใส่จำนวนสินค้า","warn");
+  if(out){
+    const short=lines.filter(l=>{ const p=num(str((byId.get(l.id).stock||{})[code])); return !(p.ok&&p.v!==null&&p.v>=num(l.qty).v); });
+    if(short.length&&!armed(btn,"ของไม่พอ · กดอีกครั้งเพื่อยืนยัน")) return say("#mvMsg",`สต็อกไม่พอหรือยังไม่ได้นับ: ${short.map(l=>byId.get(l.id).item).join(", ")} · ตรวจจำนวน หรือกดอีกครั้งเพื่อยืนยัน (ยอดจะติดลบ)`,"warn");
+  }
+  mvBusy=true; btn.disabled=true; say("#mvMsg","กำลังบันทึก…");
+  const j=await call("move_create",{kind:mvForm.kind,branch:code,note:$("#mvNote").value.trim(),lines});
+  mvBusy=false; btn.disabled=false;
+  if(!j.ok) return say("#mvMsg",errText(j),"warn");
+  useApi(Object.assign({schema:2},j));
+  closeMvForm();
+  if(isAdmin()) $("#mvBranch").value=code;
+  if(!$("#mvTo").value||$("#mvTo").value<addDays(0)) $("#mvTo").value=addDays(0);
+  await loadMoves(true);
+  say("#mvListMsg",`บันทึก${j.kind} ${j.no} แล้ว (${j.lines} รายการ) · ปรับสต็อกแล้ว`,"ok");
+  render();
+}
+$("#btnMvOut").addEventListener("click",()=>openMvForm("out"));
+$("#btnMvIn").addEventListener("click",()=>openMvForm("in"));
+$("#btnMvClose").addEventListener("click",closeMvForm);
+$("#btnMvSave").addEventListener("click",e=>saveMoves(e.currentTarget));
+$("#mvQ").addEventListener("input",renderMvPick);
+$("#mvFormBranch").addEventListener("change",()=>{ renderMvPick(); renderMvCart(); });
+$("#mvForm").addEventListener("click",e=>{
+  const c=e.target.closest("[data-mvc]"); if(c){ mvCat=c.dataset.mvc; renderMvPick(); return; }
+  const st=e.target.closest("[data-mvstep]");
+  if(st&&mvForm){
+    const row=st.closest("[data-mvid]"), inp=row.querySelector("[data-mvq]");
+    const n=Math.max(0,(num(inp.value).v||0)+Number(st.dataset.mvstep));
+    inp.value=n?fmt(n):""; setMvQty(row.dataset.mvid,inp.value); row.classList.toggle("on",n>0); renderMvCart();
+  }
+});
+$("#mvForm").addEventListener("input",e=>{
+  const q=e.target.closest("[data-mvq]");
+  if(q&&mvForm){ const row=q.closest("[data-mvid]"); setMvQty(row.dataset.mvid,q.value); row.classList.toggle("on",num(q.value).v>0); renderMvCart(); }
+});
+$("#page-moves").addEventListener("click",e=>{ const k=e.target.closest("[data-mvk]"); if(k){ mvKind=k.dataset.mvk; renderMoves(); } });
+$("#mvCat").addEventListener("change",renderMoves);
+$("#mvQList").addEventListener("input",renderMoves);
+["mvFrom","mvTo","mvBranch"].forEach(id=>$("#"+id).addEventListener("change",()=>loadMoves()));
+
 (async function init(){
   if(PR_ONLY){
     /* the PR list does not need the item list, so sign in and show it while the items load */
