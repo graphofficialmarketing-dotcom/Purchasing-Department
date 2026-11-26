@@ -514,7 +514,7 @@ tr.item.deleted .cell:disabled{text-decoration:line-through;opacity:1}
       <a href="#history" data-page="history">ประวัติรับของ</a>
     </div>
     <div class="who">
-      <a class="btn navlink" id="lnkPR" href="pr.html" hidden>อนุมัติใบขอซื้อ <span class="badge" id="bdgPRW" hidden></span></a>
+      <a class="btn navlink" id="lnkPR" href="pr.html" hidden><span id="lnkPRText">อนุมัติใบขอซื้อ</span> <span class="badge" id="bdgPRW" hidden></span></a>
       <a class="btn navlink" id="lnkMain" href="./" hidden>หน้าหลัก</a>
       <span id="whoLabel"></span>
       <button type="button" id="btnLogin" class="btn">เข้าสู่ระบบ</button>
@@ -936,6 +936,8 @@ const canCentral=()=>isAdmin()||isHQ();
 const isTR=no=>String(no||"").startsWith("TR-");
 const hasPR=()=>!ONLY||ONLY.includes("pr");                 /* the main page sends PRs to pr.html */
 const prHref=()=>hasPR()?"#pr":"pr.html";
+const hasRC=()=>!ONLY||ONLY.includes("receive");            /* ...and receiving too */
+const rcHref=no=>(hasRC()?"":"pr.html")+"#receive"+(no?"/"+encodeURIComponent(no):"");
 const branchName=code=>{ const b=(branchList.length?branchList:(me&&me.branches)||[]).find(x=>x.code===code); return b?b.name:code; };
 const allBranches=()=>branchList.length?branchList:((me&&me.branches)||[]);
 
@@ -977,7 +979,8 @@ function updateWho(){
   $("#whoLabel").innerHTML=me?`<b>${esc(isAdmin()?"ฝ่ายจัดซื้อ":isHQ()?"ส่วนกลาง (คลังกลาง)":"สาขา "+me.branch.name)}</b>`:"";
   $("#btnLogin").hidden=!!me; $("#btnLogout").hidden=!me;
   document.querySelectorAll(".tabs a").forEach(a=>{ const pg=a.dataset.page; a.hidden=(ONLY&&!ONLY.includes(pg))||(pg==="central"&&!HQ_ONLY&&!canCentral()); });
-  $("#lnkPR").hidden=!isAdmin()||hasPR();
+  $("#lnkPR").hidden=!me||hasPR();
+  $("#lnkPRText").textContent=isAdmin()?"อนุมัติใบขอซื้อ":"ขอซื้อ · รับของ";
   $("#lnkMain").hidden=!isAdmin()||!PR_ONLY;
 }
 function onAuthChanged(){
@@ -1032,11 +1035,14 @@ async function updateBadges(){
     const j=await call("pr_list",{status:"wait"});
     const n=j.ok?j.docs.length:0; pr.textContent=n; pr.hidden=!n; pr.title=n?`รออนุมัติ ${n} ใบ`:"";
     pw.textContent=n; pw.hidden=!n; pw.title=pr.title;
+    $("#lnkPR").setAttribute("href","pr.html");
     rc.hidden=true;
   }else{
     const j=await call("po_list",{open:true});
     open=j.ok?j.docs:[];
     const n=open.filter(d=>d.branch===myCode()).length; rc.textContent=n; rc.hidden=!n; rc.title=n?`PO รอรับของ ${n} ใบ`:"";
+    pw.textContent=n; pw.hidden=!n; pw.title=rc.title;               /* main page: the count rides on the ขอซื้อ · รับของ link */
+    $("#lnkPR").setAttribute("href",n?"pr.html#receive":"pr.html");
     pr.hidden=true;
   }
   if(canCentral()&&apiRev>=6&&(!ONLY||ONLY.includes("central"))){
@@ -1053,6 +1059,7 @@ function route(){
   document.title=TITLE;
   const i=h.indexOf("/"), page=(i<0?h:h.slice(0,i))||"stock", arg=i<0?"":h.slice(i+1);
   if(page==="pr"&&!hasPR()){ location.replace("pr.html"); return; }
+  if(page==="receive"&&!hasRC()){ location.replace(rcHref(arg)); return; }
   const p=ONLY?(ONLY.includes(page)?page:ONLY[0]):(PAGES[page]?page:"stock");
   currentPage=p;
   document.querySelectorAll(".page").forEach(el=>{ el.hidden=el.id!=="page-"+p; });
@@ -2222,7 +2229,7 @@ function poCard(d){
     <span class="meta">${thDate(d.date,true)} · ${t?"จากสต็อกกลาง":`ผู้ขาย ${esc(d.sup)}`} · ส่งที่ ${esc(d.branchName)}${d.due?` · กำหนดส่ง ${thDate(d.due)}`:""}</span>
     <span class="right">${t?"":`<b>${money(d.total)} บาท</b>`}</span></div>
     <p class="meta-line">${esc(live(d).map(l=>l.item).slice(0,4).join(", "))}${live(d).length>4?` และอีก ${live(d).length-4} รายการ`:""} · ${progress(d)}${d.pr?` · จาก ${esc(d.pr)}`:""}</p>
-    <div class="docactions"><a class="btn small" href="#po/${encodeURIComponent(d.no)}">ดู / พิมพ์</a>${canReceive(d)?`<a class="btn small primary" href="#receive/${encodeURIComponent(d.no)}">รับของ</a>`:""}</div></article>`;
+    <div class="docactions"><a class="btn small" href="#po/${encodeURIComponent(d.no)}">ดู / พิมพ์</a>${canReceive(d)?`<a class="btn small primary" href="${rcHref(d.no)}">รับของ</a>`:""}</div></article>`;
 }
 function renderPOList(){
   const openN=poDocs.filter(d=>d.status==="รอส่งของ"||d.status==="รับบางส่วน").length;
@@ -2420,7 +2427,7 @@ async function showPO(no,quiet){
   const d=j.doc, received=d.lines.some(l=>Number(l.received)>0);
   $("#poSheet").innerHTML=poSheetHTML(j);
   $("#poActions").innerHTML=`<button type="button" class="btn primary" data-print>พิมพ์ / บันทึก PDF</button>`+
-    (canReceive(d)?`<a class="btn" href="#receive/${encodeURIComponent(d.no)}">รับของ</a>`:"")+
+    (canReceive(d)?`<a class="btn" href="${rcHref(d.no)}">รับของ</a>`:"")+
     (isAdmin()&&d.status!=="ยกเลิก"?`<button type="button" class="btn" data-poedit>แก้ไข${isTR(d.no)?"ใบเบิก":" PO"}</button>`:"")+
     (isAdmin()&&d.status!=="ยกเลิก"&&!received?`<button type="button" class="btn danger" data-pocancel="${esc(d.no)}">${isTR(d.no)?"ยกเลิกใบเบิก (คืนของเข้าสต็อกกลาง)":"ยกเลิก PO"}</button>`:"");
   document.title=`${d.no} · ${isTR(d.no)?"ใบเบิกสินค้า":"ใบสั่งซื้อ"}`;
@@ -2457,7 +2464,7 @@ function renderRcList(){
   $("#rcList").innerHTML=list.length?list.map(d=>`<article class="doc"><div class="dochead"><span class="no">${esc(d.no)}</span>${isTR(d.no)?'<span class="pill p-tr">ใบเบิก</span>':""}<span class="pill ${PO_CLS[d.status]}">${esc(d.status)}</span>
     <span class="meta">${isTR(d.no)?"จากสต็อกกลาง":`ผู้ขาย ${esc(d.sup)}`} · ${isTR(d.no)?"เบิกเมื่อ":"สั่งเมื่อ"} ${thDate(d.date)}${d.due?` · กำหนดส่ง ${thDate(d.due)}`:""}${isAdmin()?` · ส่งที่ ${esc(d.branchName)}`:""}</span></div>
     <p class="meta-line">${esc(live(d).map(l=>`${l.item} ${fmt(l.qty)} ${l.unit}`).slice(0,3).join(", "))}${live(d).length>3?` และอีก ${live(d).length-3} รายการ`:""} · ${progress(d)}</p>
-    <div class="docactions"><a class="btn primary" href="#receive/${encodeURIComponent(d.no)}">รับของ</a><a class="btn ghost small" href="#po/${encodeURIComponent(d.no)}">ดูใบสั่งซื้อ</a></div></article>`).join(""):
+    <div class="docactions"><a class="btn primary" href="${rcHref(d.no)}">รับของ</a><a class="btn ghost small" href="${poHref(d.no)}">ดูใบสั่งซื้อ</a></div></article>`).join(""):
     `<div class="empty-card">ไม่มีใบสั่งซื้อที่รอรับของ${isBranch()?` ของสาขา ${esc(me.branch.name)}`:""}</div>`;
 }
 $("#rcBranchFilter").addEventListener("change",renderRcList);
@@ -2475,7 +2482,7 @@ async function openReceive(no){
 function renderReceive(){
   const d=rc.doc;
   if(d.status==="ยกเลิก"||d.status==="รับครบ"){
-    $("#rcForm").innerHTML=`<div class="gate"><p>${esc(d.no)} ${d.status==="ยกเลิก"?"ถูกยกเลิกแล้ว ไม่ต้องรับของ":"รับของครบแล้ว"}</p><div class="docactions"><a class="btn" href="#history">ดูประวัติรับของ</a><a class="btn ghost" href="#receive">PO อื่นที่รอรับของ</a></div></div>`;
+    $("#rcForm").innerHTML=`<div class="gate"><p>${esc(d.no)} ${d.status==="ยกเลิก"?"ถูกยกเลิกแล้ว ไม่ต้องรับของ":"รับของครบแล้ว"}</p><div class="docactions"><a class="btn" href="${ONLY&&!ONLY.includes("history")?"./":""}#history">ดูประวัติรับของ</a><a class="btn ghost" href="#receive">PO อื่นที่รอรับของ</a></div></div>`;
     return;
   }
   $("#rcForm").innerHTML=`
@@ -2615,6 +2622,7 @@ $("#hQ").addEventListener("input",renderHistory);
     return;
   }
   const po=new URLSearchParams(location.search).get("po");
+  if(po&&!hasRC()){ location.replace("pr.html?po="+encodeURIComponent(po)); return; }   /* QR on POs printed before receiving moved to pr.html */
   if(po) history.replaceState(null,"",location.pathname+"#receive/"+encodeURIComponent(po));
   updateWho(); route();
   await load();
