@@ -275,7 +275,8 @@ tr.item.deleted td:not(.act){opacity:.45}
 .qtybox .unit{font-size:12px;color:var(--muted);min-width:34px}
 .step{font:inherit;width:34px;height:34px;border-radius:8px;border:1px solid var(--line);background:var(--paper);color:var(--ink);cursor:pointer;font-size:18px;line-height:1}
 .step:focus-visible{outline:3px solid var(--focus);outline-offset:1px}
-.cart h3{font-size:16px;margin:4px 0 8px;display:flex;gap:8px;align-items:baseline}
+.cart h3{font-size:16px;margin:4px 0 8px;display:flex;flex-wrap:wrap;gap:2px 8px;align-items:baseline;white-space:nowrap}
+.cart h3 small{white-space:normal}
 .cart h3 small{font-family:var(--body);font-weight:400;color:var(--muted);font-size:13px}
 .cart .lines .cell{height:32px}
 .formactions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
@@ -412,6 +413,16 @@ tr.item.deleted .cell:disabled{text-decoration:line-through;opacity:1}
   .prlines .nt{grid-area:nt}
   .prlines .nt:not(:empty)::before{content:"· "}
   .prlines .res{grid-area:res;margin-top:4px}
+  /* ฝ่ายผลิตพิจารณาคำขอบนมือถือ: ชื่อสินค้าเต็มบรรทัด, ขอ/ส่ง/สต็อกอยู่ข้างใต้ */
+  .deptlines thead{display:none}
+  .deptlines,.deptlines tbody{display:block}
+  .deptlines tr{display:grid;grid-template-columns:34px auto minmax(0,1fr);grid-template-areas:"chk nm nm" "chk ask q" "chk sn sn";gap:4px 10px;padding:10px 8px;border-bottom:1px solid var(--line);align-items:center}
+  .deptlines tr:last-child{border-bottom:0}
+  .deptlines td{display:block;padding:0;border:0}
+  .deptlines .chk{grid-area:chk;align-self:start} .deptlines .nm{grid-area:nm;font-weight:600}
+  .deptlines .ask{grid-area:ask;text-align:left;white-space:nowrap} .deptlines .ask::before{content:"ขอ ";color:var(--muted);font-weight:400}
+  .deptlines .q{grid-area:q;display:flex;align-items:center;gap:6px} .deptlines .q::before{content:"ส่ง";color:var(--muted);font-size:13px}
+  .deptlines .sn{grid-area:sn}
 }
 
 /* decision: totals under the lines */
@@ -431,6 +442,9 @@ tr.item.deleted .cell:disabled{text-decoration:line-through;opacity:1}
 #ctTabs{margin:2px 0 10px}
 .ctbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:6px}
 .ctbar #ctQ{flex:1 1 260px;min-width:0}
+.ctbar #ctUnit{flex:0 1 auto;width:auto;min-width:170px;font-weight:600}
+/* ฝ่ายผลิต: ปลายทางของแต่ละรายการในตะกร้าใบขอซื้อ */
+.todept{color:var(--accent,#7c3aed);font-weight:600}
 .ctdates{display:flex;gap:10px;flex-wrap:wrap;align-items:center;font-size:14px;color:var(--muted)}
 .ctdates label{display:flex;gap:6px;align-items:center}
 .ctdates .cell{width:auto}
@@ -507,8 +521,8 @@ tr.item.deleted .cell:disabled{text-decoration:line-through;opacity:1}
   <div class="wrap">
     <div class="tabs">
       <a href="#stock" data-page="stock">สต็อก</a>
-      <a href="#central" data-page="central" hidden>สต็อกกลาง <span class="badge" id="bdgCT" hidden></span></a>
-      <a href="#pr" data-page="pr">ขอซื้อ (PR) <span class="badge" id="bdgPR" hidden></span></a>
+      <a href="#central" data-page="central" hidden><span id="ctTab">สต็อกกลาง</span> <span class="badge" id="bdgCT" hidden></span></a>
+      <a href="#pr" data-page="pr"><span id="prTab">ขอซื้อ (PR)</span> <span class="badge" id="bdgPR" hidden></span></a>
       <a href="#po" data-page="po">สั่งซื้อ (PO)</a>
       <a href="#receive" data-page="receive">รับของ <span class="badge" id="bdgRC" hidden></span></a>
       <a href="#history" data-page="history">ประวัติรับของ</a>
@@ -608,7 +622,7 @@ tr.item.deleted .cell:disabled{text-decoration:line-through;opacity:1}
   <!-- ===================== ขอซื้อ (PR) ===================== -->
   <div class="page" id="page-central" hidden>
     <div class="pagehead">
-      <div><h2>สต็อกกลาง</h2><p class="sub" id="ctSub">ของในคลังกลาง (คอลัมน์ สต็อก HQ · ส่วนกลาง) · หักออกเมื่อฝ่ายจัดซื้ออนุมัติให้จ่ายจากสต็อกกลาง และเพิ่มเมื่อรับของจากผู้ขายเข้าคลังกลาง</p></div>
+      <div><h2 id="ctTitle">สต็อกกลาง</h2><p class="sub" id="ctSub">ของในคลังกลาง (คอลัมน์ สต็อก HQ · ส่วนกลาง) · หักออกเมื่อฝ่ายจัดซื้ออนุมัติให้จ่ายจากสต็อกกลาง และเพิ่มเมื่อรับของจากผู้ขายเข้าคลังกลาง</p></div>
       <div class="headbtns" id="ctBtns"></div>
     </div>
     <div class="gate" id="ctGate" hidden><p id="ctGateText">เข้าสู่ระบบด้วยรหัสของส่วนกลาง (HQ) หรือฝ่ายจัดซื้อ เพื่อดูสต็อกกลาง</p><button type="button" class="btn primary" id="ctLogin" data-login>เข้าสู่ระบบ</button></div>
@@ -616,6 +630,7 @@ tr.item.deleted .cell:disabled{text-decoration:line-through;opacity:1}
       <section class="tiles ct-tiles" id="ctStats" aria-label="สรุปสต็อกกลาง"></section>
       <div class="chips" id="ctTabs" role="group" aria-label="มุมมองสต็อกกลาง"></div>
       <div class="ctbar">
+        <select id="ctUnit" class="cell" aria-label="ดูสต็อกของ" hidden></select>
         <input id="ctQ" class="cell" type="search" placeholder="ค้นหาสินค้า เลขที่เอกสาร หรือสาขา" aria-label="ค้นหาในสต็อกกลาง" autocomplete="off">
         <div class="chips" id="ctSubF" role="group" aria-label="ตัวกรอง"></div>
         <span class="ctdates" id="ctDates" hidden><label>ตั้งแต่ <input id="ctFrom" class="cell" type="date"></label><label>ถึง <input id="ctTo" class="cell" type="date"></label></span>
@@ -659,6 +674,7 @@ tr.item.deleted .cell:disabled{text-decoration:line-through;opacity:1}
     <div class="filterbar" id="prBar" hidden>
       <div class="chips" id="prFilter" role="group" aria-label="สถานะใบขอซื้อ"></div>
       <select id="prBranchFilter" class="cell" aria-label="สาขา" hidden></select>
+      <select id="prToFilter" class="cell" aria-label="ส่งถึงฝ่าย" hidden></select>
       <input id="prQList" class="cell" type="search" placeholder="ค้นหาเลขที่ PR หรือสินค้า" aria-label="ค้นหาใบขอซื้อ">
     </div>
     <p class="msgline" id="prListMsg" role="status" aria-live="polite"></p>
@@ -917,7 +933,7 @@ function armed(btn,label){ /* two-step confirm on one button: returns true on th
 
 /* ---------- state ---------- */
 let items=null, version=null, source="", transport="direct", legacy=false, apiRev=0;   /* apiRev 3+: PR order date can be chosen */
-let branchList=[], stockCodes=[];
+let branchList=[], stockCodes=[], deptList=[];   /* deptList: ฝ่ายผลิต [{code,name,kinds,nk}] (Apps Script rev 9) */
 let view=store.raw(VIEW_KEY);            /* "" = total of all branches, else a branch code */
 let me=null;                             /* who is signed in: {role, branch, branches, settings, suppliers} */
 let pw=store.raw(PW_KEY);
@@ -931,8 +947,19 @@ const isAdmin=()=>!!me&&me.role==="admin";
 const isBranch=()=>!!me&&me.role==="branch";
 const myCode=()=>isBranch()?me.branch.code:"";
 const isHQ=()=>isBranch()&&myCode()===HQ_CODE;
-const canCentral=()=>isAdmin()||isHQ();
+/* ฝ่ายผลิต: แถวในชีต สาขา ที่มีชนิดสินค้าที่ส่งให้สาขา · ใบขอซื้อของชนิดนั้นส่งตรงถึงฝ่าย ฝ่ายอนุมัติเองแล้วออกใบส่งของ */
+const normKind=s=>str(s).toLowerCase().replace(/[^0-9a-z\u0E00-\u0E7F]+/g,"").replace(/(.)\1+/g,"$1");
+const setDepts=list=>{ if(Array.isArray(list)) deptList=list.map(d=>({...d,nk:(d.kinds||[]).map(normKind).filter(Boolean)})); };
+const deptOf=code=>deptList.find(d=>d.code===code)||null;
+function deptFor(it){ const k=normKind(it.kind), c=normKind(it.cat); return deptList.find(d=>d.nk.some(n=>n===k||n===c))||null; }
+const isDeptUser=()=>isBranch()&&!!deptOf(myCode());
+const isUnit=()=>isHQ()||isDeptUser();              /* has its own stock page */
+const canCentral=()=>isAdmin()||isUnit();
 const isTR=no=>String(no||"").startsWith("TR-");
+const isDO=no=>String(no||"").startsWith("DO-");
+const isXfer=no=>isTR(no)||isDO(no);                /* ใบส่งของภายใน: TR จากสต็อกกลาง, DO จากฝ่ายผลิต */
+const srcOf=d=>d.from||(isTR(d.no)?HQ_CODE:"");
+const unitName=code=>code===HQ_CODE?"สต็อกกลาง":(deptOf(code)||{name:branchName(code)}).name;
 const hasPR=()=>!ONLY||ONLY.includes("pr");                 /* the main page sends PRs to pr.html */
 const prHref=()=>hasPR()?"#pr":"pr.html";
 const hasRC=()=>!ONLY||ONLY.includes("receive");            /* ...and receiving too */
@@ -970,12 +997,14 @@ async function call(action,data){
 let afterLogin=null;
 function askLogin(hint,then){
   afterLogin=then||null;
-  $("#loginHint").textContent=hint||(PR_ONLY?"ใส่รหัสของสาขา เพื่อเปิดใบขอซื้อ ดูสถานะ และรับของ":HQ_ONLY?"ใส่รหัสของส่วนกลาง (HQ) หรือรหัสฝ่ายจัดซื้อ":"ใส่รหัสของสาขา หรือรหัสฝ่ายจัดซื้อ · คนที่ไม่มีรหัสดูตารางสต็อกได้อย่างเดียว");
+  $("#loginHint").textContent=hint||(PR_ONLY?"ใส่รหัสของสาขา เพื่อเปิดใบขอซื้อ ดูสถานะ และรับของ":HQ_ONLY?"ใส่รหัสของคลังกลาง (HQ) ฝ่ายผลิต หรือรหัสฝ่ายจัดซื้อ":"ใส่รหัสของสาขา หรือรหัสฝ่ายจัดซื้อ · คนที่ไม่มีรหัสดูตารางสต็อกได้อย่างเดียว");
   $("#loginPanel").hidden=false; $("#loginMsg").textContent=""; $("#pwInput").value="";
   window.scrollTo({top:0}); $("#pwInput").focus();
 }
 function updateWho(){
-  $("#whoLabel").innerHTML=me?`<b>${esc(isAdmin()?"ฝ่ายจัดซื้อ":isHQ()?"ส่วนกลาง (คลังกลาง)":"สาขา "+me.branch.name)}</b>`:"";
+  $("#whoLabel").innerHTML=me?`<b>${esc(isAdmin()?"ฝ่ายจัดซื้อ":isHQ()?"ส่วนกลาง (คลังกลาง)":isDeptUser()?me.branch.name:"สาขา "+me.branch.name)}</b>`:"";
+  $("#ctTab").textContent=isDeptUser()?"สต็อกของฝ่าย":"สต็อกกลาง";
+  $("#prTab").textContent=isDeptUser()&&apiRev>=9?"คำขอจากสาขา":"ขอซื้อ (PR)";
   $("#btnLogin").hidden=!!me; $("#btnLogout").hidden=!me;
   document.querySelectorAll(".tabs a").forEach(a=>{ const pg=a.dataset.page; a.hidden=(ONLY&&!ONLY.includes(pg))||(pg==="central"&&!HQ_ONLY&&!canCentral()); });
   $("#lnkPR").hidden=!me||hasPR();
@@ -1006,7 +1035,7 @@ $("#loginForm").addEventListener("submit",async e=>{
   try{ j=await apiPost({action:"check",password:p}); }catch(err){ j={ok:false,error:"network"}; }
   $("#btnLoginGo").disabled=false;
   if(j&&j.ok&&j.role){
-    pw=p; me=j;
+    pw=p; me=j; setDepts(j.depts);
     if($("#pwRemember").checked) store.set(PW_KEY,p); else store.del(PW_KEY);
     $("#loginPanel").hidden=true; msg.textContent=""; setMsg(""); notice("");
     onAuthChanged(); maybeRestore();
@@ -1021,7 +1050,7 @@ async function restoreSession(){
   if(!pw||!API_URL) return;
   let j=null;
   try{ j=await apiPost({action:"check",password:pw}); }catch(e){ return; }
-  if(j&&j.ok&&j.role){ me=j; onAuthChanged(); maybeRestore(); }
+  if(j&&j.ok&&j.role){ me=j; setDepts(j.depts); onAuthChanged(); maybeRestore(); }
   else if(j&&j.error==="wrong_password"){ pw=""; store.del(PW_KEY); }
 }
 async function updateBadges(){
@@ -1030,7 +1059,7 @@ async function updateBadges(){
   if(!me||legacy){ pr.hidden=rc.hidden=ct.hidden=pw.hidden=true; return; }
   let open=null;
   if(isAdmin()){
-    const j=await call("pr_list",{status:"wait"});
+    const j=await call("pr_list",apiRev>=9?{status:"wait",box:"in"}:{status:"wait"});
     const n=j.ok?j.docs.length:0; pr.textContent=n; pr.hidden=!n; pr.title=n?`รออนุมัติ ${n} ใบ`:"";
     pw.textContent=n; pw.hidden=!n; pw.title=pr.title;
     $("#lnkPR").setAttribute("href","pr.html");
@@ -1042,10 +1071,15 @@ async function updateBadges(){
     pw.textContent=n; pw.hidden=!n; pw.title=rc.title;               /* main page: the count rides on the ขอซื้อ · รับของ link */
     $("#lnkPR").setAttribute("href",n?"pr.html#receive":"pr.html");
     pr.hidden=true;
+    if(isDeptUser()&&apiRev>=9&&hasPR()){   /* ฝ่ายผลิต: คำขอจากสาขาที่รอฝ่ายอนุมัติ */
+      const k=await call("pr_list",{status:"wait",box:"in"});
+      const m=k.ok?k.docs.length:0; pr.textContent=m; pr.hidden=!m; pr.title=m?`คำขอจากสาขารออนุมัติ ${m} ใบ`:"";
+    }
   }
   if(canCentral()&&apiRev>=6&&(!ONLY||ONLY.includes("central"))){
     if(!open){ const j=await call("po_list",{open:true}); open=j.ok?j.docs:[]; }
-    const n=open.filter(d=>isTR(d.no)&&d.status==="รอส่งของ").length; ct.textContent=n; ct.hidden=!n; ct.title=n?`ใบเบิกรอส่ง ${n} ใบ`:"";
+    const unit=isAdmin()?HQ_CODE:myCode();
+    const n=open.filter(d=>isXfer(d.no)&&srcOf(d)===unit&&d.status==="รอส่งของ").length; ct.textContent=n; ct.hidden=!n; ct.title=n?`ใบส่งของรอส่ง ${n} ใบ`:"";
   }else ct.hidden=true;
 }
 const PAGES={stock:()=>{}, central:enterCentral, pr:enterPR, po:enterPO, receive:enterReceive, history:enterHistory};
@@ -1136,6 +1170,7 @@ function useApi(j){
   legacy=j.schema!==2; apiRev=Number(j.rev)||0;
   if(Array.isArray(j.branches)) branchList=j.branches;
   if(Array.isArray(j.stockCodes)) stockCodes=j.stockCodes;
+  setDepts(j.depts);
   setItems(j.rows||[],j.version,"api");
 }
 function notice(text){ const el=$("#notice"); el.textContent=text||""; el.hidden=!text; }
@@ -1693,29 +1728,46 @@ $("#btnReload").addEventListener("click",async()=>{
 /* ======================================================================
    สต็อกกลาง (คอลัมน์ สต็อก HQ · ส่วนกลาง)
    ====================================================================== */
-let ctView="stock", ctSub="all", ctData=null, ctShip=[], ctEdit=false, ctDraft={}, ctBusy=false;
-const ctStock=it=>{ const p=num(str((it.stock||{})[HQ_CODE])); return p.ok&&p.v!==null?p.v:null; };
-const ctUsable=()=>(items||[]).filter(it=>it.sid&&str(it.item).trim());
+let ctView="stock", ctSub="all", ctData=null, ctShip=[], ctEdit=false, ctDraft={}, ctBusy=false, ctPick=HQ_CODE;
+const ctCode=()=>isAdmin()?ctPick:(isUnit()?myCode():HQ_CODE);   /* ฝ่ายจัดซื้อเลือกดูได้ทุกคลัง/ฝ่าย */
+const ctLabel=()=>ctCode()===HQ_CODE?"สต็อกกลาง":"สต็อก "+unitName(ctCode());
+const ctStock=it=>{ const p=num(str((it.stock||{})[ctCode()])); return p.ok&&p.v!==null?p.v:null; };
+const ctAll=()=>(items||[]).filter(it=>it.sid&&str(it.item).trim());
+/* ฝ่ายผลิต: แสดงเฉพาะสินค้าที่ฝ่ายส่งให้สาขา และของที่มียอดในคอลัมน์ของฝ่าย (พิมพ์ค้นหาเพื่อดูทุกรายการ) */
+const ctMine=it=>{ const code=ctCode(); if(code===HQ_CODE||!deptOf(code)) return true; const d=deptFor(it); return (!!d&&d.code===code)||str((it.stock||{})[code]).trim()!==""; };
+const ctUsable=()=>ctAll().filter(ctMine);
 async function enterCentral(){
   const allowed=!!me&&!legacy&&canCentral(), starting=HQ_ONLY&&!booted;
   $("#ctGate").hidden=allowed||starting||legacy; $("#ctWrap").hidden=!allowed;
   if(!allowed){
     $("#ctBtns").innerHTML="";
-    $("#ctGateText").textContent=me?`หน้านี้สำหรับส่วนกลาง (HQ) และฝ่ายจัดซื้อ · ตอนนี้เข้าระบบในชื่อสาขา ${me.branch.name} กดออกจากระบบแล้วเข้าใหม่ด้วยรหัสของส่วนกลาง`:"เข้าสู่ระบบด้วยรหัสของส่วนกลาง (HQ) หรือฝ่ายจัดซื้อ เพื่อดูสต็อกกลาง";
+    $("#ctGateText").textContent=me?`หน้านี้สำหรับคลังกลาง (HQ) ฝ่ายผลิต และฝ่ายจัดซื้อ · ตอนนี้เข้าระบบในชื่อสาขา ${me.branch.name} กดออกจากระบบแล้วเข้าใหม่ด้วยรหัสของคลังกลางหรือฝ่ายผลิต`:"เข้าสู่ระบบด้วยรหัสของคลังกลาง (HQ) ฝ่ายผลิต หรือฝ่ายจัดซื้อ เพื่อดูสต็อก";
     $("#ctLogin").hidden=!!me;
     if(HQ_ONLY&&!starting&&!me&&!legacy&&$("#loginPanel").hidden) askLogin();
     return;
   }
   if(!$("#ctFrom").value) $("#ctFrom").value=addDays(-30);
+  ctHead();
   renderCentral();
   await loadCentral();
 }
+function ctHead(){
+  const sel=$("#ctUnit"), units=[{code:HQ_CODE,name:"สต็อกกลาง (HQ)"}].concat(apiRev>=9?deptList:[]);
+  sel.hidden=!isAdmin()||units.length<2;
+  if(!sel.hidden){ sel.innerHTML=units.map(u=>`<option value="${esc(u.code)}">${esc(u.code===HQ_CODE?u.name:"ฝ่าย "+u.name)}</option>`).join(""); sel.value=ctPick; }
+  const hq=ctCode()===HQ_CODE, code=ctCode();
+  $("#ctTitle").textContent=hq?"สต็อกกลาง":"สต็อก "+unitName(code);
+  $("#ctSub").textContent=hq?"ของในคลังกลาง (คอลัมน์ สต็อก HQ · ส่วนกลาง) · หักออกเมื่อฝ่ายจัดซื้ออนุมัติให้จ่ายจากสต็อกกลาง และเพิ่มเมื่อรับของจากผู้ขายเข้าคลังกลาง":
+    `ของที่ฝ่าย ${unitName(code)} ทำไว้ (คอลัมน์ สต็อก ${code}) · หักออกเมื่อฝ่ายอนุมัติคำขอของสาขาและออกใบส่งของ · นับยอดที่ผลิตเพิ่มได้ที่ปุ่ม นับ / แก้ยอด · แสดงเฉพาะสินค้าของฝ่าย พิมพ์ค้นหาเพื่อดูรายการอื่น`;
+}
 async function loadCentral(quiet){
-  if(apiRev<6){ ctData={pending:{},moves:[]}; ctShip=[]; say("#ctMsg","ต้องอัปเดตโค้ด Apps Script ก่อน จึงจะเห็นของที่สาขาขอ ประวัติเข้า-ออก และใบเบิก","warn"); renderCentral(); return; }
-  if(!quiet) say("#ctMsg","กำลังโหลดสต็อกกลาง…");
-  const [a,b]=await Promise.all([call("central",{from:$("#ctFrom").value,to:$("#ctTo").value}),call("po_list",{open:true})]);
+  if(apiRev<6){ ctData={pending:{},moves:[]}; ctShip=[]; say("#ctMsg","ต้องอัปเดตโค้ด Apps Script ก่อน จึงจะเห็นของที่สาขาขอ ประวัติเข้า-ออก และใบส่งของ","warn"); renderCentral(); return; }
+  if(!quiet) say("#ctMsg",`กำลังโหลด${ctLabel()}…`);
+  const code=ctCode();
+  const [a,b]=await Promise.all([call("central",{code,from:$("#ctFrom").value,to:$("#ctTo").value}),call("po_list",{open:true})]);
+  if(code!==ctCode()) return;   /* switched to another unit meanwhile */
   if(!a.ok){ say("#ctMsg",errText(a),"warn"); return; }
-  ctData=a; ctShip=b.ok?(b.docs||[]).filter(d=>isTR(d.no)):[];
+  ctData=a; ctShip=b.ok?(b.docs||[]).filter(d=>isXfer(d.no)&&srcOf(d)===code):[];
   if(!quiet) say("#ctMsg","");
   renderCentral();
 }
@@ -1728,16 +1780,16 @@ function ctCounts(){
 function renderCentral(){
   if($("#page-central").hidden||$("#ctWrap").hidden) return;
   const c=ctCounts();
-  $("#ctStats").innerHTML=[["stock:have","มีของ",c.have,"all"],["stock:out","หมด / ติดลบ",c.out,"out"],["pending:all","สาขาขอรออนุมัติ",c.pend,"low"],["ship:all","ใบเบิกรอส่ง",c.ship,"none"]]
+  $("#ctStats").innerHTML=[["stock:have","มีของ",c.have,"all"],["stock:out","หมด / ติดลบ",c.out,"out"],["pending:all","สาขาขอรออนุมัติ",c.pend,"low"],["ship:all","ใบส่งของรอส่ง",c.ship,"none"]]
     .map(([v,l,n,k])=>`<button type="button" class="tile s-${k}" data-ctgo="${v}" aria-pressed="${v===ctView+":"+ctSub}"><b>${fmt(n)}</b><span>${l}</span></button>`).join("");
-  $("#ctTabs").innerHTML=[["stock","คงเหลือ"],["pending",`สาขาขอรออนุมัติ <em>${c.pend}</em>`],["moves","เข้า-ออก"],["ship",`ใบเบิกรอส่ง <em>${c.ship}</em>`]]
+  $("#ctTabs").innerHTML=[["stock","คงเหลือ"],["pending",`สาขาขอรออนุมัติ <em>${c.pend}</em>`],["moves","เข้า-ออก"],["ship",`ใบส่งของรอส่ง <em>${c.ship}</em>`]]
     .map(([k,l])=>`<button type="button" class="chip" data-ctv="${k}" aria-pressed="${ctView===k}">${l}</button>`).join("");
   const subs={stock:[["all","ทั้งหมด"],["have","มีของ"],["out","หมด / ติดลบ"],["none","ยังไม่นับ"]],pending:[["all","ทั้งหมด"],["short","ไม่พอจ่าย"]],moves:[["all","ทั้งหมด"],["in","รับเข้า"],["out","จ่ายออก"]],ship:[]}[ctView];
   if(!subs.some(([k])=>k===ctSub)) ctSub="all";
   $("#ctSubF").innerHTML=subs.map(([k,l])=>`<button type="button" class="chip" data-cts="${k}" aria-pressed="${ctSub===k}">${l}</button>`).join("");
   $("#ctDates").hidden=ctView!=="moves";
   $("#ctBtns").innerHTML=ctView!=="stock"?"":ctEdit?`<button type="button" class="btn primary" id="btnCtSave"${ctBusy?" disabled":""}>บันทึกยอด</button><button type="button" class="btn ghost" id="btnCtCancel">ยกเลิก</button>`:
-    `<button type="button" class="btn" id="btnCtEdit">นับ / แก้ยอดสต็อกกลาง</button>`;
+    `<button type="button" class="btn" id="btnCtEdit">นับ / แก้ยอด${ctCode()===HQ_CODE?"สต็อกกลาง":"สต็อกของฝ่าย"}</button>`;
   if(!items){ $("#ctBody").innerHTML='<p class="msgline">กำลังโหลดรายการสินค้า…</p>'; return; }
   const q=$("#ctQ").value.trim().toLowerCase();
   const hit=(...xs)=>!q||xs.join(" ").toLowerCase().includes(q);
@@ -1748,32 +1800,33 @@ function renderCentral(){
 }
 function ctStockHTML(hit){
   const pend=(ctData&&ctData.pending)||{};
-  const rows=ctUsable().filter(it=>{
+  const rows=($("#ctQ").value.trim()?ctAll():ctUsable()).filter(it=>{
     const v=ctStock(it);
     if(ctSub==="have"&&!(v>0)) return false;
     if(ctSub==="out"&&!(v!==null&&v<=0)) return false;
     if(ctSub==="none"&&v!==null) return false;
     return hit(it.item,it.kind,it.cat,it.code,it.sup);
   });
-  if(!rows.length) return `<div class="empty-card">ไม่มีสินค้าตรงกับที่เลือก</div>`;
+  if(!rows.length) return `<div class="empty-card">ไม่มีสินค้าตรงกับที่เลือก${ctCode()!==HQ_CODE&&!$("#ctQ").value.trim()?" · ยังไม่มีสินค้าของฝ่ายนี้ ตรวจคอลัมน์ ชนิดสินค้าที่ส่งให้สาขา ในชีต สาขา หรือพิมพ์ค้นหาเพื่อดูทุกรายการ":""}</div>`;
   return `<div class="linesbox"><table class="lines cttable"><thead><tr><th>สินค้า</th><th>หน่วย</th><th class="r">คงเหลือ</th><th class="r">สาขาขอรอ</th><th class="r">หลังจ่าย</th></tr></thead><tbody>${rows.map(it=>{
     const v=ctStock(it), p=pend[it.sid], after=p&&v!==null?v-p.qty:null;
     const cur=v===null?"":fmt(v), d=ctDraft[it.sid], changed=d!==undefined&&d.trim()!==cur;
     return `<tr class="${changed?"chg":""}${v!==null&&v<0?" neg":""}"><td class="nm">${esc(it.item)}<div class="muted">${esc([it.cat,it.kind,it.sup].filter(Boolean).join(" · "))}</div></td><td class="u">${esc(it.unit)}</td>
-      <td class="r q">${ctEdit?`<input class="cell num" data-ctq="${esc(it.sid)}" value="${esc(d!==undefined?d:cur)}" inputmode="decimal" style="width:90px" aria-label="ยอดสต็อกกลาง ${esc(it.item)}">`:(v===null?'<span class="muted">ยังไม่นับ</span>':`<b>${fmt(v)}</b>`)}</td>
+      <td class="r q">${ctEdit?`<input class="cell num" data-ctq="${esc(it.sid)}" value="${esc(d!==undefined?d:cur)}" inputmode="decimal" style="width:90px" aria-label="ยอด${esc(ctLabel())} ${esc(it.item)}">`:(v===null?'<span class="muted">ยังไม่นับ</span>':`<b>${fmt(v)}</b>`)}</td>
       <td class="r pq">${p?fmt(p.qty):""}</td><td class="r aq${after!==null&&after<0?" short":""}">${after===null?"":fmt(after)}</td></tr>`; }).join("")}</tbody></table></div>`;
 }
 function ctPendingHTML(hit){
-  const pend=(ctData&&ctData.pending)||{}, byId=new Map(ctUsable().map(it=>[it.sid,it]));
+  const pend=(ctData&&ctData.pending)||{}, byId=new Map(ctAll().map(it=>[it.sid,it]));
   let rows=Object.entries(pend).map(([sid,p])=>{ const it=byId.get(sid)||{item:sid,unit:""}; const v=it.stock?ctStock(it):null; return {sid,p,it,v,left:v===null?null:v-p.qty}; })
     .filter(r=>(ctSub!=="short"||r.left===null||r.left<0)&&hit(r.it.item,...r.p.prs.map(x=>x.no+" "+x.branch)));
   rows.sort((a,b)=>(a.left===null?-1e9:a.left)-(b.left===null?-1e9:b.left));
-  if(!rows.length) return `<div class="empty-card">${ctSub==="short"?"ทุกรายการที่สาขาขอ สต็อกกลางมีพอ":"ไม่มีของที่สาขาขอรออนุมัติ"}</div>`;
+  if(!rows.length) return `<div class="empty-card">${ctSub==="short"?`ทุกรายการที่สาขาขอ ${esc(ctLabel())}มีพอ`:"ไม่มีของที่สาขาขอรออนุมัติ"}</div>`;
   return rows.map(r=>`<article class="doc ctpend"><div class="dochead"><span class="nmh">${esc(r.it.item)}</span>
-      <span class="meta">ขอรวม <b>${fmt(r.p.qty)}</b> ${esc(r.it.unit)} · สต็อกกลางมี <b>${r.v===null?"ยังไม่นับ":fmt(r.v)}</b></span>
+      <span class="meta">ขอรวม <b>${fmt(r.p.qty)}</b> ${esc(r.it.unit)} · ${esc(ctLabel())}มี <b>${r.v===null?"ยังไม่นับ":fmt(r.v)}</b></span>
       <span class="right">${r.left===null?'<span class="pill p-none">ยังไม่นับ</span>':r.left>=0?`<span class="pill p-ok">พอ · เหลือ ${fmt(r.left)}</span>`:`<span class="pill p-out">ขาด ${fmt(-r.left)}</span>`}</span></div>
     <p class="meta-line">${r.p.prs.map(x=>`${esc(x.branch)} ${fmt(x.qty)} (${esc(x.no)})`).join(" · ")}</p></article>`).join("")+
-    (isAdmin()?`<p class="msgline">อนุมัติและเลือกจ่ายจากสต็อกกลางได้ที่หน้า <a href="${prHref()}">อนุมัติใบขอซื้อ</a></p>`:"");
+    (ctCode()!==HQ_CODE&&(isAdmin()||isDeptUser())?`<p class="msgline">อนุมัติคำขอและออกใบส่งของได้ที่หน้า <a href="${prHref()}">${isAdmin()?"อนุมัติใบขอซื้อ":"คำขอจากสาขา"}</a></p>`:
+     isAdmin()?`<p class="msgline">อนุมัติและเลือกจ่ายจากสต็อกกลางได้ที่หน้า <a href="${prHref()}">อนุมัติใบขอซื้อ</a></p>`:"");
 }
 function ctMovesHTML(hit){
   const moves=((ctData&&ctData.moves)||[]).filter(m=>(ctSub==="all"||m.kind===ctSub)&&hit(m.item,m.doc,m.ref,m.who));
@@ -1782,7 +1835,7 @@ function ctMovesHTML(hit){
   for(const m of moves){ const k=String(m.at).slice(0,10); if(!days.has(k)) days.set(k,[]); days.get(k).push(m); }
   return [...days].map(([day,list])=>`<section class="ctday"><h3>${thDate(day)}</h3>${list.map(m=>{
     const out=m.kind==="out", cancelled=m.status==="ยกเลิก";
-    const st=out?(cancelled?'<span class="pill p-none">ยกเลิก · คืนสต็อกกลางแล้ว</span>':`<span class="pill ${PO_CLS[m.status]||"p-none"}">${esc(m.status==="รอส่งของ"?"สาขายังไม่รับ":m.status==="รับบางส่วน"?`สาขารับแล้ว ${fmt(m.received)}`:"สาขารับครบ")}</span>`):"";
+    const st=out?(cancelled?'<span class="pill p-none">ยกเลิก · คืนสต็อกแล้ว</span>':`<span class="pill ${PO_CLS[m.status]||"p-none"}">${esc(m.status==="รอส่งของ"?"สาขายังไม่รับ":m.status==="รับบางส่วน"?`สาขารับแล้ว ${fmt(m.received)}`:"สาขารับครบ")}</span>`):"";
     return `<div class="ctmove${out?" out":" in"}${cancelled?" cancelled":""}"><span class="t">${esc(String(m.at).slice(11,16))}</span>
       <span class="k">${out?"จ่ายออก":"รับเข้า"}</span><span class="nm">${esc(m.item)}</span>
       <span class="qn">${out?"−":"+"}${fmt(m.qty)} ${esc(m.unit)}</span>
@@ -1790,32 +1843,32 @@ function ctMovesHTML(hit){
 }
 function ctShipHTML(hit){
   const list=ctShip.filter(d=>hit(d.no,d.branchName,d.pr,...d.lines.map(l=>l.item)));
-  if(!list.length) return `<div class="empty-card">ไม่มีใบเบิกที่รอส่ง</div>`;
+  if(!list.length) return `<div class="empty-card">ไม่มีใบส่งของที่รอส่ง</div>`;
   return list.map(d=>`<article class="doc"><div class="dochead"><a class="no" href="${poHref(d.no)}">${esc(d.no)}</a><span class="pill ${PO_CLS[d.status]||"p-none"}">${esc(d.status==="รอส่งของ"?"รอส่ง":d.status)}</span>
       <span class="meta">${thDate(d.date,true)} · ส่งที่ <b>${esc(d.branchName)}</b>${d.due?` · กำหนดส่ง ${thDate(d.due)}`:""}${d.pr?` · จาก ${esc(d.pr)}`:""}</span></div>
     <p class="meta-line">${esc(live(d).map(l=>`${l.item} ${fmt(l.qty)} ${l.unit}`).join(", "))}</p>
-    <div class="docactions"><a class="btn small primary" href="${poHref(d.no)}">ดู / พิมพ์ใบเบิก</a></div></article>`).join("");
+    <div class="docactions"><a class="btn small primary" href="${poHref(d.no)}">ดู / พิมพ์ใบส่งของ</a></div></article>`).join("");
 }
 async function saveCentral(){
-  const changes=[], bad=[], byId=new Map(ctUsable().map(it=>[it.sid,it]));
+  const changes=[], bad=[], byId=new Map(ctAll().map(it=>[it.sid,it]));
   for(const [sid,v] of Object.entries(ctDraft)){
     const it=byId.get(sid); if(!it) continue;
     const cur=ctStock(it)===null?"":fmt(ctStock(it)), t=v.trim();
     if(t===cur) continue;
     if(!num(t).ok){ bad.push(it.item); continue; }
-    changes.push({id:sid,qty:t,old:str((it.stock||{})[HQ_CODE])});
+    changes.push({id:sid,qty:t,old:str((it.stock||{})[ctCode()])});
   }
   if(bad.length){ say("#ctMsg",`ตัวเลขไม่ถูกต้อง: ${bad.slice(0,3).join(", ")}${bad.length>3?` และอีก ${bad.length-3} รายการ`:""}`,"warn"); return; }
   if(!changes.length){ ctEdit=false; ctDraft={}; say("#ctMsg","ไม่มียอดที่เปลี่ยน"); renderCentral(); return; }
-  ctBusy=true; renderCentral(); say("#ctMsg","กำลังบันทึกยอดสต็อกกลาง…");
-  const j=await call("stock_save",{code:HQ_CODE,changes});
+  ctBusy=true; renderCentral(); say("#ctMsg",`กำลังบันทึกยอด${ctLabel()}…`);
+  const j=await call("stock_save",{code:ctCode(),changes});
   ctBusy=false;
   if(!j.ok){ say("#ctMsg",errText(j),"warn"); renderCentral(); return; }
   useApi(Object.assign({schema:2},j));
   const clash=new Set(j.conflicts||[]);
   const keep={}; for(const sid of clash) if(ctDraft[sid]!==undefined) keep[sid]=ctDraft[sid];
   ctDraft=keep; ctEdit=clash.size>0;
-  say("#ctMsg",clash.size?`บันทึกแล้ว ${j.saved} รายการ · ${clash.size} รายการมีการเปลี่ยนยอดก่อน (เช่น เพิ่งจ่ายออก) ตรวจแล้วกดบันทึกอีกครั้ง`:`บันทึกยอดสต็อกกลางแล้ว ${j.saved} รายการ`,clash.size?"warn":"ok");
+  say("#ctMsg",clash.size?`บันทึกแล้ว ${j.saved} รายการ · ${clash.size} รายการมีการเปลี่ยนยอดก่อน (เช่น เพิ่งจ่ายออก) ตรวจแล้วกดบันทึกอีกครั้ง`:`บันทึกยอด${ctLabel()}แล้ว ${j.saved} รายการ`,clash.size?"warn":"ok");
   render(); renderCentral();
 }
 $("#page-central").addEventListener("click",e=>{
@@ -1836,7 +1889,13 @@ $("#page-central").addEventListener("input",e=>{
   if(q){ ctDraft[q.dataset.ctq]=q.value; q.closest("tr").classList.add("chg"); return; }
   if(e.target.id==="ctQ") renderCentral();
 });
-$("#page-central").addEventListener("change",e=>{ if(e.target.id==="ctFrom"||e.target.id==="ctTo") loadCentral(); });
+$("#page-central").addEventListener("change",e=>{
+  if(e.target.id==="ctFrom"||e.target.id==="ctTo") loadCentral();
+  if(e.target.id==="ctUnit"){
+    if(ctEdit&&Object.keys(ctDraft).length){ e.target.value=ctPick; say("#ctMsg","บันทึกหรือยกเลิกยอดที่แก้ก่อน แล้วค่อยเปลี่ยนคลัง","warn"); return; }
+    ctPick=e.target.value; ctEdit=false; ctDraft={}; ctData=null; ctShip=[]; ctHead(); renderCentral(); loadCentral();
+  }
+});
 
 /* ======================================================================
    ใบขอซื้อ (PR)
@@ -1861,10 +1920,17 @@ async function enterPR(){
     if(PR_ONLY&&!starting&&!legacy&&$("#loginPanel").hidden) askLogin();
     return;
   }
-  if(PR_ONLY&&isBranch()&&!prPicked) prFilter="all";
-  $("#prSub").textContent=isAdmin()?"ใบขอซื้อจากทุกสาขา · กด “พิจารณา / ออก PO” เพื่ออนุมัติและออกใบสั่งซื้อให้ผู้ขาย":`ใบขอซื้อของสาขา ${me.branch.name}`;
+  const dept=isDeptUser()&&apiRev>=9;
+  if(dept&&!prPicked) prFilter="inwait";
+  else if(!dept&&prFilter.startsWith("in")) prFilter="wait";
+  if(PR_ONLY&&isBranch()&&!dept&&!prPicked) prFilter="all";
+  $("#prSub").textContent=isAdmin()?"ใบขอซื้อจากทุกสาขา · กด “พิจารณา / ออก PO” เพื่ออนุมัติและออกใบสั่งซื้อให้ผู้ขาย":
+    dept?`คำขอจากสาขาที่ส่งถึง ${me.branch.name} · กด “พิจารณา / ออกใบส่งของ” เพื่ออนุมัติ แล้วพิมพ์ใบส่งของแนบไปกับของ`:`ใบขอซื้อของสาขา ${me.branch.name}`;
   $("#prBranchFilter").hidden=!isAdmin();
   if(isAdmin()) branchOptions($("#prBranchFilter"),true);
+  const tf=$("#prToFilter"), keep=tf.value;
+  tf.hidden=!isAdmin()||apiRev<9||!deptList.length;
+  if(!tf.hidden){ tf.innerHTML='<option value="">ถึงฝ่ายจัดซื้อ</option><option value="*">ถึงทุกฝ่าย</option>'+deptList.map(d=>`<option value="${esc(d.code)}">ถึง ${esc(d.name)}</option>`).join(""); if([...tf.options].some(o=>o.value===keep)) tf.value=keep; }
   await loadPR();
 }
 async function loadPR(quiet){
@@ -1873,17 +1939,23 @@ async function loadPR(quiet){
   if(!j.ok){ if(!quiet) say("#prListMsg",errText(j),"warn"); return; }
   prDocs=j.docs||[]; prLoadedAt=Date.now(); if(!quiet) say("#prListMsg","");
   renderPRList();
-  if(isAdmin()){ const n=prDocs.filter(d=>d.status==="รออนุมัติ").length, b=$("#bdgPR"); b.textContent=n; b.hidden=!n; }
+  if(isAdmin()){ const n=prDocs.filter(d=>d.status==="รออนุมัติ"&&!d.to).length, b=$("#bdgPR"); b.textContent=n; b.hidden=!n; }
+  if(isDeptUser()&&apiRev>=9){ const n=prDocs.filter(d=>d.status==="รออนุมัติ"&&d.to===myCode()).length, b=$("#bdgPR"); b.textContent=n; b.hidden=!n; }
 }
 function renderPRList(){
-  const waitN=prDocs.filter(d=>d.status==="รออนุมัติ").length;
-  $("#prFilter").innerHTML=[["wait",`รออนุมัติ <em>${waitN}</em>`],["all",`ทั้งหมด <em>${prDocs.length}</em>`]]
+  const tf=isAdmin()&&!$("#prToFilter").hidden?$("#prToFilter").value:"*";
+  let base=prDocs.filter(d=>tf==="*"||(tf===""?!d.to:d.to===tf));
+  const dept=isDeptUser()&&apiRev>=9, inbox=prDocs.filter(d=>d.to===myCode()), mine=prDocs.filter(d=>d.branch===myCode());
+  const waitN=base.filter(d=>d.status==="รออนุมัติ").length;
+  $("#prFilter").innerHTML=(dept?[["inwait",`คำขอรออนุมัติ <em>${inbox.filter(d=>d.status==="รออนุมัติ").length}</em>`],["in",`คำขอทั้งหมด <em>${inbox.length}</em>`],["out",`ใบขอซื้อของฝ่าย <em>${mine.length}</em>`]]:
+    [["wait",`รออนุมัติ <em>${waitN}</em>`],["all",`ทั้งหมด <em>${base.length}</em>`]])
     .map(([k,l])=>`<button type="button" class="chip" data-prf="${k}" aria-pressed="${prFilter===k}">${l}</button>`).join("");
+  if(dept) base=prFilter==="out"?mine:inbox.filter(d=>prFilter!=="inwait"||d.status==="รออนุมัติ");
   const q=$("#prQList").value.trim().toLowerCase(), bf=isAdmin()?$("#prBranchFilter").value:"";
-  const list=prDocs.filter(d=>(prFilter==="all"||d.status==="รออนุมัติ")&&(!bf||d.branch===bf)&&
-    (!q||[d.no,d.branchName,d.by,...d.lines.map(l=>l.item),...(d.pos||[])].join(" ").toLowerCase().includes(q)));
+  const list=base.filter(d=>(dept||prFilter==="all"||d.status==="รออนุมัติ")&&(!bf||d.branch===bf)&&
+    (!q||[d.no,d.branchName,d.by,d.toName,...d.lines.map(l=>l.item),...(d.pos||[])].join(" ").toLowerCase().includes(q)));
   $("#prList").innerHTML=list.length?list.map(prCard).join(""):
-    `<div class="empty-card">${prFilter==="wait"?"ไม่มีใบขอซื้อที่รออนุมัติ":"ยังไม่มีใบขอซื้อ"}${isBranch()?" · กด “+ สร้างใบขอซื้อ” เพื่อขอของ":""}</div>`;
+    `<div class="empty-card">${dept&&prFilter!=="out"?(prFilter==="inwait"?"ไม่มีคำขอจากสาขาที่รออนุมัติ":"ยังไม่มีคำขอจากสาขา"):prFilter==="wait"?"ไม่มีใบขอซื้อที่รออนุมัติ":"ยังไม่มีใบขอซื้อ"}${isBranch()&&(!dept||prFilter==="out")?" · กด “+ สร้างใบขอซื้อ” เพื่อขอของ":""}</div>`;
   for(const no of Object.keys(decideState)) if(list.some(d=>d.no===no)) renderDecide(no);
 }
 function lineResult(l){
@@ -1895,19 +1967,21 @@ function prCard(d){
   const pending=d.status==="รออนุมัติ";
   const canCancel=pending&&(isAdmin()||d.branch===myCode());
   const canDelete=isAdmin()&&!d.locked;
+  const canDecide=pending&&(isAdmin()||(!!d.to&&d.to===myCode()));
   return `<article class="doc${decideState[d.no]?" open-doc":""}" data-pr="${esc(d.no)}">
     <div class="dochead"><span class="no">${esc(d.no)}</span><span class="pill ${PR_CLS[d.status]||"p-none"}">${esc(d.status)}</span>
-      <span class="meta">สั่งซื้อ ${thDate(d.date,true)} · ${esc(d.branchName)}${d.by?` · ผู้ขอ ${esc(d.by)}`:""}${d.needBy?` · ต้องการภายใน ${thDate(d.needBy)}`:""}</span>
+      <span class="meta">สั่งซื้อ ${thDate(d.date,true)} · ${esc(d.branchName)}${d.by?` · ผู้ขอ ${esc(d.by)}`:""}${d.needBy?` · ต้องการภายใน ${thDate(d.needBy)}`:""}${d.to?` · ถึง <b>${esc(d.toName||d.to)}</b>`:""}</span>
       <span class="right">${(d.pos||[]).map(p=>`<a class="btn small ghost" href="${poHref(p)}">${esc(p)}</a>`).join("")}</span></div>
     <div class="linesbox"><table class="lines prlines"><thead><tr><th>สินค้า</th><th class="r">ขอ</th><th>หน่วย</th><th>หมายเหตุ</th><th>ผล</th></tr></thead><tbody>
       ${d.lines.map(l=>`<tr><td class="nm">${esc(l.item)}</td><td class="r q">${fmt(l.qty)}</td><td class="u">${esc(l.unit)}</td><td class="muted nt">${esc(l.note)}</td><td class="res">${lineResult(l)}</td></tr>`).join("")}
     </tbody></table></div>
-    ${pending&&(isAdmin()||canCancel)||canDelete?`<div class="docactions">${pending&&isAdmin()?`<button type="button" class="btn primary small" data-decide="${esc(d.no)}">พิจารณา / ออก PO</button>`:""}${canCancel?`<button type="button" class="btn small danger" data-prcancel="${esc(d.no)}">ยกเลิกใบขอซื้อ</button>`:""}${canDelete?`<button type="button" class="btn small ghost deltext" data-prdel="${esc(d.no)}" data-pos="${esc((d.pos||[]).join(", "))}">ลบใบขอซื้อ</button>`:""}</div>`:""}
+    ${canDecide||canCancel||canDelete?`<div class="docactions">${canDecide?`<button type="button" class="btn primary small" data-decide="${esc(d.no)}">${d.to?"พิจารณา / ออกใบส่งของ":"พิจารณา / ออก PO"}</button>`:""}${canCancel?`<button type="button" class="btn small danger" data-prcancel="${esc(d.no)}">ยกเลิกใบขอซื้อ</button>`:""}${canDelete?`<button type="button" class="btn small ghost deltext" data-prdel="${esc(d.no)}" data-pos="${esc((d.pos||[]).join(", "))}">ลบใบขอซื้อ</button>`:""}</div>`:""}
     <div class="decide" data-box="${esc(d.no)}" hidden></div>
   </article>`;
 }
 $("#prQList").addEventListener("input",renderPRList);
 $("#prBranchFilter").addEventListener("change",renderPRList);
+$("#prToFilter").addEventListener("change",renderPRList);
 $("#page-pr").addEventListener("click",async e=>{
   const f=e.target.closest("[data-prf]");
   if(f){ prFilter=f.dataset.prf; prPicked=true; renderPRList(); return; }
@@ -1941,6 +2015,16 @@ $("#page-pr").addEventListener("click",async e=>{
 /* admin: approve → POs per supplier */
 async function openDecide(no){
   const d=prDocs.find(x=>x.no===no); if(!d) return;
+  if(d.to){   /* คำขอถึงฝ่ายผลิต: ไม่มีผู้ขาย/ราคา · ส่งจากสต็อกของฝ่าย */
+    const byId=new Map((items||[]).map(it=>[it.sid,it]));
+    decideState[no]={dept:d.to,deptName:d.toName||d.to,due:d.needBy||"",note:"",reason:"",lines:d.lines.map(l=>{
+      const it=byId.get(l.itemId), p=it?num(str((it.stock||{})[d.to])):null;
+      return {line:l.line,item:l.item,unit:l.unit,asked:l.qty,ok:true,qty:fmt(l.qty),have:p&&p.ok&&p.v!==null?p.v:null};
+    })};
+    renderPRList();
+    const box=document.querySelector(`[data-box="${CSS.escape(no)}"]`); if(box) box.scrollIntoView({block:"nearest"});
+    return;
+  }
   decideState[no]={loading:true};
   renderPRList();
   const j=await call("prices",{ids:[...new Set(d.lines.map(l=>l.itemId))]});
@@ -2007,13 +2091,46 @@ function previewText(s){
   const {groups,blank,tr}=decideTotals(s), vat=num(s.vat).v||0;
   if(!groups.size&&!tr) return "ไม่มีรายการที่อนุมัติ · กด “ไม่อนุมัติทั้งใบ” ถ้าจะปฏิเสธใบนี้";
   const po=groups.size?`จะออก PO ${groups.size} ใบ: `+[...groups].map(([k,g])=>`${k} (${g.n} รายการ ${money(g.amt*(1+vat/100))} บาท${vat?" รวม VAT":""})`).join(" · ")+(blank?` · ยังไม่ใส่ราคา ${blank} รายการ (จะบันทึกเป็น 0)`:""):"";
-  const t=tr?`${groups.size?" · และ":"จะออก"}ใบเบิกจากสต็อกกลาง 1 ใบ (${tr} รายการ) หักสต็อกกลางทันทีที่อนุมัติ`:"";
+  const t=tr?`${groups.size?" · และ":"จะออก"}ใบส่งของจากสต็อกกลาง 1 ใบ (${tr} รายการ) หักสต็อกกลางทันทีที่อนุมัติ`:"";
   return po+t;
+}
+const deptShort=l=>l.have===null||l.have<(num(l.qty).v||0);
+function deptNote(l){
+  if(l.have===null) return "สต็อกของฝ่ายยังไม่ได้นับ";
+  const left=l.have-(num(l.qty).v||0);
+  return left>=0?`มี ${fmt(l.have)} → เหลือ ${fmt(left)}`:`มี ${fmt(l.have)} ไม่พอ ขาด ${fmt(-left)}`;
+}
+function deptPreview(s){
+  const n=s.lines.filter(l=>l.ok).length;
+  return n?`จะออกใบส่งของ 1 ใบ (${n} รายการ) จาก ${s.deptName} ไปที่สาขาที่ขอ · หักสต็อกของฝ่ายทันทีที่อนุมัติ`:"ไม่มีรายการที่อนุมัติ · กด “ไม่อนุมัติทั้งใบ” ถ้าจะปฏิเสธคำขอนี้";
+}
+function deptDecideHTML(no,s){
+  return `<h3>พิจารณาคำขอและออกใบส่งของ</h3>
+    <div class="linesbox"><table class="lines deptlines"><thead><tr><th>อนุมัติ</th><th>สินค้า</th><th class="r">ขอ</th><th>ส่ง</th><th>สต็อกของฝ่าย</th></tr></thead><tbody>
+    ${s.lines.map(l=>`<tr class="${l.ok?"":"off"}" data-dl="${l.line}">
+      <td class="chk"><input type="checkbox" class="big" data-k="ok"${l.ok?" checked":""} aria-label="อนุมัติ ${esc(l.item)}"></td>
+      <td class="nm">${esc(l.item)}<div class="muted">${esc(l.unit)}</div></td><td class="r ask">${fmt(l.asked)}</td>
+      <td class="q"><input class="cell num" data-k="qty" value="${esc(l.qty)}" inputmode="decimal" style="width:80px" aria-label="จำนวนส่ง ${esc(l.item)}"></td>
+      <td class="sn"><div class="cnote${deptShort(l)?" short":""}" data-snote>${esc(deptNote(l))}</div></td></tr>`).join("")}
+    </tbody></table></div>
+    <div class="opts">
+      <label>กำหนดส่ง<input class="cell" type="date" data-k="due" value="${esc(s.due)}"></label>
+      <label style="flex:1 1 220px">หมายเหตุ (พิมพ์บนใบส่งของ)<input class="cell" data-k="note" value="${esc(s.note)}" placeholder="เช่น ส่งรอบเช้า"></label>
+      <label style="flex:1 1 220px">เหตุผลที่ไม่อนุมัติ (แจ้งสาขา)<input class="cell" data-k="reason" value="${esc(s.reason)}" placeholder="ใช้กับรายการที่ไม่ได้ติ๊ก"></label>
+    </div>
+    <p class="preview" data-preview>${esc(deptPreview(s))}</p>
+    <div class="docactions">
+      <button type="button" class="btn primary" data-approve="${esc(no)}">อนุมัติ · ออกใบส่งของ</button>
+      <button type="button" class="btn danger" data-rejectall="${esc(no)}">ไม่อนุมัติทั้งใบ</button>
+      <button type="button" class="btn ghost" data-closedecide="${esc(no)}">ปิด</button>
+      <p class="msgline" data-dmsg role="status" aria-live="polite"></p>
+    </div>`;
 }
 function renderDecide(no){
   const box=document.querySelector(`[data-box="${CSS.escape(no)}"]`), s=decideState[no];
   if(!box||!s) return;
   box.hidden=false;
+  if(s.dept){ box.innerHTML=deptDecideHTML(no,s); return; }
   if(s.loading){ box.innerHTML='<p class="msgline">กำลังโหลดราคาล่าสุด…</p>'; return; }
   box.innerHTML=`<h3>พิจารณาและออกใบสั่งซื้อ</h3>
     <div class="linesbox"><table class="lines"><thead><tr><th>อนุมัติ</th><th>สินค้า</th><th class="r">ขอ</th><th>สั่ง</th><th>ผู้ขาย</th><th>ราคา/หน่วย</th><th class="r">รวม</th></tr></thead><tbody>
@@ -2045,6 +2162,15 @@ function onDecideInput(e){
   const el=e.target.closest("[data-k]"), box=e.target.closest("[data-box]"); if(!el||!box) return;
   const s=decideState[box.dataset.box]; if(!s||s.loading) return;
   const k=el.dataset.k, tr=el.closest("[data-dl]");
+  if(s.dept){
+    if(tr){
+      const l=s.lines.find(x=>String(x.line)===tr.dataset.dl); if(!l) return;
+      if(k==="ok"){ l.ok=el.checked; tr.classList.toggle("off",!l.ok); } else if(k==="qty") l.qty=el.value;
+      const sn=tr.querySelector("[data-snote]"); sn.textContent=deptNote(l); sn.classList.toggle("short",deptShort(l));
+    }else s[k]=el.value;
+    box.querySelector("[data-preview]").textContent=deptPreview(s);
+    return;
+  }
   if(tr){
     const l=s.lines.find(x=>String(x.line)===tr.dataset.dl); if(!l) return;
     if(k==="central"){ l.central=el.checked; renderDecide(box.dataset.box); return; }
@@ -2068,6 +2194,7 @@ async function submitDecide(no,approve,btn){
   const s=decideState[no], box=document.querySelector(`[data-box="${CSS.escape(no)}"]`);
   if(!s||s.loading||prBusy) return;
   const msg=t=>{ const m=box.querySelector("[data-dmsg]"); m.textContent=t; m.className="msgline warn"; };
+  if(s.dept) return submitDeptDecide(no,approve,btn,s,msg);
   const lines=s.lines.map(l=>({line:l.line,ok:approve&&l.ok,qty:l.qty.trim(),src:l.central?"central":"",sup:l.central?"":l.sup.trim(),price:l.central?"":l.price.trim(),reason:(!approve||!l.ok)?s.reason.trim():""}));
   if(approve){
     if(!lines.some(l=>l.ok)) return msg("ยังไม่ได้ติ๊กอนุมัติสักรายการ ถ้าจะปฏิเสธทั้งใบ กด “ไม่อนุมัติทั้งใบ”");
@@ -2085,9 +2212,29 @@ async function submitDecide(no,approve,btn){
   await loadPR();
   const made=[];
   if(j.pos&&j.pos.length) made.push(`ออกใบสั่งซื้อ ${j.pos.join(", ")}`);
-  if(j.trs&&j.trs.length) made.push(`ออกใบเบิกจากสต็อกกลาง ${j.trs.join(", ")}`);
+  if(j.trs&&j.trs.length) made.push(`ออกใบส่งของจากสต็อกกลาง ${j.trs.join(", ")}`);
   say("#prListMsg",made.length?`อนุมัติ ${no} แล้ว · ${made.join(" · ")} (กดเลขที่เพื่อพิมพ์)${j.learned?` · จำราคาใหม่ในชีต ราคาสินค้า ${j.learned} รายการ`:""}`:`บันทึก ไม่อนุมัติ ${no} แล้ว`,"ok");
   if(j.trs&&j.trs.length) load();
+  updateBadges();
+}
+
+async function submitDeptDecide(no,approve,btn,s,msg){
+  const lines=s.lines.map(l=>({line:l.line,ok:approve&&l.ok,qty:l.qty.trim(),reason:(!approve||!l.ok)?s.reason.trim():""}));
+  if(approve){
+    if(!lines.some(l=>l.ok)) return msg("ยังไม่ได้ติ๊กอนุมัติสักรายการ ถ้าจะปฏิเสธทั้งใบ กด “ไม่อนุมัติทั้งใบ”");
+    const bad=lines.find(l=>l.ok&&!(num(l.qty).v>0));
+    if(bad) return msg(`จำนวนส่งของ “${s.lines.find(x=>x.line===bad.line).item}” ต้องมากกว่า 0`);
+    const short=s.lines.filter(l=>l.ok&&deptShort(l));
+    if(short.length&&!armed(btn,"สต็อกไม่พอ · กดอีกครั้งเพื่อยืนยัน")) return msg(`สต็อกของฝ่ายไม่พอหรือยังไม่ได้นับ: ${short.map(l=>l.item).join(", ")} · แก้จำนวน หรือนับยอดที่ผลิตเพิ่มก่อน หรือกดอีกครั้งเพื่อยืนยัน (ยอดจะติดลบจนกว่าจะนับเพิ่ม)`);
+  }
+  prBusy=true; btn.disabled=true;
+  const j=await call("pr_decide",{no,lines,due:s.due,note:s.note.trim(),reason:s.reason.trim()});
+  prBusy=false; btn.disabled=false;
+  if(!j.ok) return msg(errText(j));
+  delete decideState[no];
+  await loadPR();
+  say("#prListMsg",j.dos&&j.dos.length?`อนุมัติ ${no} แล้ว · ออกใบส่งของ ${j.dos.join(", ")} (กดเลขที่เพื่อพิมพ์แนบไปกับของ)`:`บันทึก ไม่อนุมัติ ${no} แล้ว`,"ok");
+  if(j.dos&&j.dos.length) load();
   updateBadges();
 }
 
@@ -2134,16 +2281,26 @@ function setCartQty(sid,v){
 function renderCart(){
   const byId=new Map((items||[]).map(it=>[it.sid,it]));
   const rows=Object.entries(prCart.lines).filter(([sid])=>byId.has(sid));
-  const n=rows.filter(([,l])=>num(l.qty).v>0).length;
-  $("#prCount").textContent=n?`${n} รายการ`:"ยังไม่ได้เลือก ใส่จำนวนที่รายการด้านบน";
+  $("#prCount").textContent=cartCountText();
   $("#prCart").innerHTML=rows.length?`<div class="linesbox"><table class="lines cartlines"><thead><tr><th>สินค้า</th><th>จำนวน</th><th>หมายเหตุ</th><th></th></tr></thead><tbody>`+
-    rows.map(([sid,l])=>{ const it=byId.get(sid); return `<tr data-cid="${esc(sid)}"><td class="nm">${esc(it.item)}<div class="muted">${esc(it.unit)}</div></td>
+    rows.map(([sid,l])=>{ const it=byId.get(sid), to=cartDest(it); return `<tr data-cid="${esc(sid)}"><td class="nm">${esc(it.item)}<div class="muted">${esc(it.unit)}${to?` · <b class="todept">ส่งถึง ${esc(to.name)}</b>`:""}</div></td>
       <td class="q"><input class="cell num" data-cq value="${esc(l.qty)}" inputmode="decimal" style="width:80px" aria-label="จำนวน ${esc(it.item)}"></td>
       <td class="nt"><input class="cell" data-cn value="${esc(l.note||"")}" placeholder="เช่น ด่วน, ยี่ห้อเดิม" aria-label="หมายเหตุ ${esc(it.item)}"></td>
       <td class="r rm"><button type="button" class="rowbtn del" data-crm aria-label="เอาออก ${esc(it.item)}">เอาออก</button></td></tr>`; }).join("")+"</tbody></table></div>":"";
 }
+/* ของที่ฝ่ายผลิตทำเอง → ใบขอซื้อแยกถึงฝ่ายนั้น (ระบบแยกให้ตอนส่ง) */
+function cartDest(it){ if(apiRev<9||!it) return null; const d=deptFor(it); return d&&d.code!==prBranchCode()?d:null; }
+function cartCountText(){
+  const byId=new Map((items||[]).map(it=>[it.sid,it]));
+  const rows=Object.entries(prCart.lines).filter(([sid,l])=>byId.has(sid)&&num(l.qty).v>0);
+  if(!rows.length) return "ยังไม่ได้เลือก ใส่จำนวนที่รายการด้านบน";
+  const codes=[...new Set(rows.map(([sid])=>{ const d=cartDest(byId.get(sid)); return d?d.code:""; }))]   /* same order as the PRs it makes */
+    .sort((a,b)=>(a?1+deptList.findIndex(d=>d.code===a):0)-(b?1+deptList.findIndex(d=>d.code===b):0));
+  const dests=codes.map(c=>c?deptOf(c).name:"ฝ่ายจัดซื้อ");
+  return `${rows.length} รายการ${dests.length>1?` · แยกเป็น ${dests.length} ใบ (${dests.join(", ")})`:codes[0]?` · ส่งถึง ${dests[0]}`:""}`;
+}
 $("#prQ").addEventListener("input",renderPick);
-$("#prBranch").addEventListener("change",()=>{ prCart.branch=$("#prBranch").value; saveCart(); renderPick(); });
+$("#prBranch").addEventListener("change",()=>{ prCart.branch=$("#prBranch").value; saveCart(); renderPick(); renderCart(); });
 $("#prNeed").addEventListener("change",()=>{ prCart.needBy=$("#prNeed").value; saveCart(); });
 $("#prDate").addEventListener("change",()=>{
   const v=$("#prDate").value, today=addDays(0);
@@ -2169,7 +2326,7 @@ $("#prForm").addEventListener("input",e=>{
     const sid=e.target.closest("[data-cid]").dataset.cid, l=prCart.lines[sid]||(prCart.lines[sid]={qty:"",note:""});
     if(cq){ l.qty=cq.value; const p=document.querySelector(`#prPick [data-pid="${CSS.escape(sid)}"] [data-pq]`); if(p){ p.value=cq.value; p.closest("[data-pid]").classList.toggle("on",num(cq.value).v>0); } }
     else l.note=cn.value;
-    saveCart(); $("#prCount").textContent=`${Object.values(prCart.lines).filter(x=>num(x.qty).v>0).length} รายการ`;
+    saveCart(); $("#prCount").textContent=cartCountText();
   }
 });
 $("#btnPRSend").addEventListener("click",async()=>{
@@ -2192,9 +2349,12 @@ $("#btnPRSend").addEventListener("click",async()=>{
   if(!j.ok){ say("#prMsg",errText(j),"warn"); return; }
   if(by) store.set(NAME_KEY,by);
   prCart={lines:{}}; saveCart(); $("#prNeed").value="";
-  closePRForm(); if(!PR_ONLY) prFilter="wait";
+  closePRForm(); if(isDeptUser()&&apiRev>=9) prFilter="out"; else if(!PR_ONLY) prFilter="wait";
   await loadPR();
-  say("#prListMsg",`ส่งใบขอซื้อ ${j.no} แล้ว (${lines.length} รายการ) · รอฝ่ายจัดซื้ออนุมัติ`,"ok");
+  const prs=j.prs&&j.prs.length?j.prs:[{no:j.no,to:"",toName:"",lines:lines.length}];
+  const whoOK=x=>x.to?(x.toName||x.to):"ฝ่ายจัดซื้อ";
+  say("#prListMsg",prs.length>1?`ส่งใบขอซื้อแล้ว ${prs.length} ใบ แยกตามฝ่ายที่ส่งของ: `+prs.map(x=>`${x.no} → ${whoOK(x)} (${x.lines} รายการ)`).join(" · "):
+    `ส่งใบขอซื้อ ${prs[0].no} แล้ว (${lines.length} รายการ) · รอ${whoOK(prs[0])}อนุมัติ`,"ok");
   updateBadges();
 });
 
@@ -2210,7 +2370,8 @@ async function enterPO(arg){
   $("#poGate").hidden=!gate||legacy;
   $("#poListWrap").hidden=gate||!!arg; $("#poView").hidden=gate||!arg;
   if(gate) return;
-  $("#poSub").textContent=isAdmin()?"ใบสั่งซื้อและใบเบิกทุกใบ · เปิดใบแล้วกด พิมพ์ / บันทึก PDF":isHQ()?"ใบสั่งซื้อที่ส่งมาที่ส่วนกลาง และใบเบิกที่ต้องจัดส่งให้สาขา (พิมพ์แนบไปกับของ)":`ใบสั่งซื้อและใบเบิกที่ส่งของมาที่สาขา ${me.branch.name}`;
+  $("#poSub").textContent=isAdmin()?"ใบสั่งซื้อและใบส่งของทุกใบ · เปิดใบแล้วกด พิมพ์ / บันทึก PDF":isHQ()?"ใบสั่งซื้อที่ส่งมาที่ส่วนกลาง และใบส่งของที่ต้องจัดส่งให้สาขา (พิมพ์แนบไปกับของ)":
+    isDeptUser()?`ใบส่งของที่ฝ่ายออกให้สาขา (พิมพ์แนบไปกับของ) และใบสั่งซื้อที่ส่งมาที่ ${me.branch.name}`:`ใบสั่งซื้อและใบส่งของที่ส่งมาที่สาขา ${me.branch.name}`;
   if(arg) await showPO(arg); else await loadPO();
 }
 async function loadPO(){
@@ -2222,9 +2383,9 @@ async function loadPO(){
   poDocs=j.docs||[]; say("#poListMsg",""); renderPOList();
 }
 function poCard(d){
-  const t=isTR(d.no);
-  return `<article class="doc"><div class="dochead"><a class="no" href="#po/${encodeURIComponent(d.no)}">${esc(d.no)}</a>${t?'<span class="pill p-tr">ใบเบิก</span>':""}<span class="pill ${PO_CLS[d.status]||"p-none"}">${esc(d.status)}</span>
-    <span class="meta">${thDate(d.date,true)} · ${t?"จากสต็อกกลาง":`ผู้ขาย ${esc(d.sup)}`} · ส่งที่ ${esc(d.branchName)}${d.due?` · กำหนดส่ง ${thDate(d.due)}`:""}</span>
+  const t=isXfer(d.no);
+  return `<article class="doc"><div class="dochead"><a class="no" href="#po/${encodeURIComponent(d.no)}">${esc(d.no)}</a>${t?'<span class="pill p-tr">ใบส่งของ</span>':""}<span class="pill ${PO_CLS[d.status]||"p-none"}">${esc(d.status)}</span>
+    <span class="meta">${thDate(d.date,true)} · ${t?`จาก ${esc(unitName(srcOf(d)))}`:`ผู้ขาย ${esc(d.sup)}`} · ส่งที่ ${esc(d.branchName)}${d.due?` · กำหนดส่ง ${thDate(d.due)}`:""}</span>
     <span class="right">${t?"":`<b>${money(d.total)} บาท</b>`}</span></div>
     <p class="meta-line">${esc(live(d).map(l=>l.item).slice(0,4).join(", "))}${live(d).length>4?` และอีก ${live(d).length-4} รายการ`:""} · ${progress(d)}${d.pr?` · จาก ${esc(d.pr)}`:""}</p>
     <div class="docactions"><a class="btn small" href="#po/${encodeURIComponent(d.no)}">ดู / พิมพ์</a>${canReceive(d)?`<a class="btn small primary" href="${rcHref(d.no)}">รับของ</a>`:""}</div></article>`;
@@ -2248,23 +2409,24 @@ $("#page-po").addEventListener("click",async e=>{
   if(e.target.closest("[data-print]")){ window.print(); return; }
   const c=e.target.closest("[data-pocancel]");
   if(c){
-    if(!armed(c,isTR(c.dataset.pocancel)?"กดอีกครั้งเพื่อยกเลิกใบเบิก":"กดอีกครั้งเพื่อยืนยันยกเลิก PO")) return;
+    const x=isXfer(c.dataset.pocancel);
+    if(!armed(c,x?"กดอีกครั้งเพื่อยกเลิกใบส่งของ":"กดอีกครั้งเพื่อยืนยันยกเลิก PO")) return;
     c.disabled=true;
     const j=await call("po_cancel",{no:c.dataset.pocancel});
-    if(j.ok){ say("#poViewMsg",`ยกเลิก ${c.dataset.pocancel} แล้ว${isTR(c.dataset.pocancel)?" · คืนของเข้าสต็อกกลางแล้ว":""}`,"ok"); await showPO(c.dataset.pocancel,true); updateBadges(); if(isTR(c.dataset.pocancel)) load(); }
+    if(j.ok){ say("#poViewMsg",`ยกเลิก ${c.dataset.pocancel} แล้ว${x?" · คืนของเข้าสต็อกแล้ว":""}`,"ok"); await showPO(c.dataset.pocancel,true); updateBadges(); if(x) load(); }
     else { c.disabled=false; say("#poViewMsg",errText(j),"warn"); }
   }
 });
 const poLink=no=>location.origin+location.pathname.replace(/[^/]*$/,"")+"pr.html?po="+encodeURIComponent(no);   /* QR opens the branch page (ขอซื้อและรับของ) */
 
-/* ---------- แก้ไขใบสั่งซื้อ / ใบเบิก (ฝ่ายจัดซื้อ) ---------- */
+/* ---------- แก้ไขใบสั่งซื้อ / ใบส่งของ (ฝ่ายจัดซื้อ, ฝ่ายผลิตแก้ใบส่งของของตัวเอง) ---------- */
 let poEd=null;
 async function openPOEdit(btn){
   if(!poNow) return;
   if(apiRev<7){ say("#poViewMsg","ต้องอัปเดตโค้ด Apps Script ก่อน ถึงจะแก้ไขใบสั่งซื้อได้","warn"); return; }
   /* read the slip again first: a branch may have received goods since the page opened */
   btn.disabled=true;
-  const tr=isTR(poNow.doc.no);
+  const tr=isXfer(poNow.doc.no);
   const [fresh,pj]=await Promise.all([call("po_get",{no:poNow.doc.no}),tr?Promise.resolve({ok:false}):call("prices",{ids:[...new Set(poNow.doc.lines.map(l=>l.itemId))]})]);
   btn.disabled=false;
   if(!fresh.ok){ say("#poViewMsg",errText(fresh),"warn"); return; }
@@ -2291,7 +2453,7 @@ function closePOEdit(){
 }
 function trQtyHint(l){
   const dlt=(num(l.qty).v||0)-l.oldQty;
-  return dlt>0?`หักสต็อกกลางเพิ่ม ${fmt(dlt)}`:dlt<0?`คืนเข้าสต็อกกลาง ${fmt(-dlt)}`:"";
+  return dlt>0?`หักสต็อกเพิ่ม ${fmt(dlt)}`:dlt<0?`คืนเข้าสต็อก ${fmt(-dlt)}`:"";
 }
 function poEdSum(){
   const s=poEd; let sub=0;
@@ -2303,8 +2465,8 @@ function poEdSum(){
 function renderPOEdit(){
   const s=poEd, box=$("#poEdit"); if(!s){ closePOEdit(); return; }
   box.hidden=false; $("#poSheet").hidden=true; $("#poActions").hidden=true;
-  box.innerHTML=`<h3>แก้ไข${s.tr?"ใบเบิก":"ใบสั่งซื้อ"} ${esc(s.no)}</h3>
-    <p class="muted">${s.tr?"แก้จำนวนได้ ระบบจะหักหรือคืนสต็อกกลางตามส่วนต่างให้":"เติมหรือแก้ราคา จำนวน ผู้ขาย กำหนดส่ง VAT และหมายเหตุได้ ราคาจากผู้ขายประจำจะจำไว้ในชีต ราคาสินค้า"} · จำนวนต้องไม่น้อยกว่าที่รับไปแล้ว และยกเลิกได้เฉพาะรายการที่ยังไม่ได้รับของ</p>
+  box.innerHTML=`<h3>แก้ไข${s.tr?"ใบส่งของ":"ใบสั่งซื้อ"} ${esc(s.no)}</h3>
+    <p class="muted">${s.tr?"แก้จำนวนได้ ระบบจะหักหรือคืนสต็อกของต้นทางตามส่วนต่างให้":"เติมหรือแก้ราคา จำนวน ผู้ขาย กำหนดส่ง VAT และหมายเหตุได้ ราคาจากผู้ขายประจำจะจำไว้ในชีต ราคาสินค้า"} · จำนวนต้องไม่น้อยกว่าที่รับไปแล้ว และยกเลิกได้เฉพาะรายการที่ยังไม่ได้รับของ</p>
     <div class="opts">
       ${s.tr?"":`<label style="flex:1 1 200px">ผู้ขาย<input class="cell" data-e="sup" value="${esc(s.sup)}" list="dl-vendor"></label>`}
       <label>กำหนดส่ง<input class="cell" type="date" data-e="due" value="${esc(s.due)}"></label>
@@ -2364,35 +2526,36 @@ async function savePOEdit(btn){
   if(!j.ok) return m(errText(j));
   const no=s.no, tr=s.tr;
   await showPO(no,true);
-  say("#poViewMsg",`บันทึกการแก้ไข ${no} แล้ว${j.learned?` · จำราคาใหม่ในชีต ราคาสินค้า ${j.learned} รายการ`:""}${tr?" · ปรับสต็อกกลางตามจำนวนที่แก้แล้ว":""} · ถ้าส่งใบเดิมไปแล้ว ให้พิมพ์ใบนี้ส่งใหม่อีกครั้ง`,"ok");
+  say("#poViewMsg",`บันทึกการแก้ไข ${no} แล้ว${j.learned?` · จำราคาใหม่ในชีต ราคาสินค้า ${j.learned} รายการ`:""}${tr?" · ปรับสต็อกตามจำนวนที่แก้แล้ว":""} · ถ้าส่งใบเดิมไปแล้ว ให้พิมพ์ใบนี้ส่งใหม่อีกครั้ง`,"ok");
   updateBadges(); if(tr) load();
 }
 $("#poEdit").addEventListener("input",onPOEditInput);
 $("#poEdit").addEventListener("change",e=>{ if(e.target.matches('[data-e="cancel"],[data-e="due"]')) onPOEditInput(e); });
-function trSheetHTML(P){
+/* ใบส่งของ (ภายใน): จากสต็อกกลาง (TR) หรือจากฝ่ายผลิต (DO) ไปที่สาขา ไม่มีราคา */
+function xferSheetHTML(P){
   const d=P.doc, s=P.settings||{}, from=P.supplier||{}, br=P.branch||{};
   const lines=d.status==="ยกเลิก"?d.lines:live(d);
   return (d.status==="ยกเลิก"?'<div class="stamp">ยกเลิก</div>':"")+`
   <header class="ps-head">
     <div class="ps-co"><img src="logos/graph.jpg" alt=""><div><b>${esc(s.company||"ชื่อบริษัท")}</b>
       ${s.companyAddr?`<div>${esc(s.companyAddr)}</div>`:""}<div>${s.companyPhone?`โทร ${esc(s.companyPhone)}`:""}</div></div></div>
-    <div class="ps-title"><h2>ใบเบิกสินค้า</h2><div class="en">จากสต็อกกลาง · STOCK TRANSFER</div>
+    <div class="ps-title"><h2>ใบส่งของ</h2><div class="en">DELIVERY NOTE</div>
       <table class="ps-kv"><tr><th>เลขที่</th><td><b>${esc(d.no)}</b></td></tr><tr><th>วันที่</th><td>${thDate(d.date)}</td></tr>${d.pr?`<tr><th>อ้างอิงใบขอซื้อ</th><td>${esc(d.pr)}</td></tr>`:""}</table></div>
   </header>
   <section class="ps-parties">
-    <div><h4>จ่ายจาก</h4><b>${esc(from.name||"สต็อกกลาง")}</b>${from.addr?`<div>${esc(from.addr)}</div>`:""}${from.contact||from.phone?`<div>${from.contact?`ติดต่อ ${esc(from.contact)}`:""}${from.phone?` โทร ${esc(from.phone)}`:""}</div>`:""}</div>
-    <div><h4>ส่งที่</h4><b>${esc(br.name||d.branchName)}</b>${br.addr?`<div>${esc(br.addr)}</div>`:""}${br.contact||br.phone?`<div>${br.contact?`ติดต่อ ${esc(br.contact)}`:""}${br.phone?` โทร ${esc(br.phone)}`:""}</div>`:""}${d.due?`<div class="due">กำหนดส่ง ${thDate(d.due)}</div>`:""}</div>
+    <div><h4>ส่งจาก</h4><b>${esc(from.name||"สต็อกกลาง")}</b>${from.addr?`<div>${esc(from.addr)}</div>`:""}${from.contact||from.phone?`<div>${from.contact?`ติดต่อ ${esc(from.contact)}`:""}${from.phone?` โทร ${esc(from.phone)}`:""}</div>`:""}</div>
+    <div><h4>ส่งถึง</h4><b>${esc(br.name||d.branchName)}</b>${br.addr?`<div>${esc(br.addr)}</div>`:""}${br.contact||br.phone?`<div>${br.contact?`ติดต่อ ${esc(br.contact)}`:""}${br.phone?` โทร ${esc(br.phone)}`:""}</div>`:""}${d.due?`<div class="due">กำหนดส่ง ${thDate(d.due)}</div>`:""}</div>
   </section>
   <table class="ps-lines"><thead><tr><th style="width:44px">ลำดับ</th><th>รายการ</th><th class="r">จำนวน</th><th>หน่วย</th><th class="r">รับแล้ว</th></tr></thead>
   <tbody>${lines.map((l,i)=>`<tr><td>${i+1}</td><td>${esc(l.item)}</td><td class="r">${fmt(l.qty)}</td><td>${esc(l.unit)}</td><td class="r">${Number(l.received)?fmt(l.received):""}</td></tr>`).join("")}</tbody></table>
   ${d.note?`<p class="ps-note"><b>หมายเหตุ</b> ${esc(d.note)}</p>`:""}
   <footer class="ps-foot">
-    <div class="ps-qr">${QR.svg(poLink(d.no),116)}<div><b>กรุณาแนบใบเบิกนี้ไปกับสินค้า</b><br>สาขาสแกน QR นี้เมื่อได้รับของ<br><span style="color:#555">${esc(d.no)}</span></div></div>
-    <div class="ps-sign"><div><span></span>ผู้จ่ายของ (คลังกลาง)</div><div><span></span>ผู้รับของ (สาขา)</div></div>
+    <div class="ps-qr">${QR.svg(poLink(d.no),116)}<div><b>กรุณาแนบใบส่งของนี้ไปกับสินค้า</b><br>สาขาสแกน QR นี้เมื่อได้รับของ<br><span style="color:#555">${esc(d.no)}</span></div></div>
+    <div class="ps-sign"><div><span></span>ผู้ส่งของ (${esc(isTR(d.no)?"คลังกลาง":from.name||"ฝ่าย")})</div><div><span></span>ผู้รับของ (สาขา)</div></div>
   </footer>`;
 }
 function poSheetHTML(P){
-  if(isTR(P.doc.no)) return trSheetHTML(P);
+  if(isXfer(P.doc.no)) return xferSheetHTML(P);
   const d=P.doc, s=P.settings||{}, sup=P.supplier||{}, br=P.branch||{};
   const lines=d.status==="ยกเลิก"?d.lines:live(d);
   return (d.status==="ยกเลิก"?'<div class="stamp">ยกเลิก</div>':"")+`
@@ -2424,11 +2587,12 @@ async function showPO(no,quiet){
   poNow=j;
   const d=j.doc, received=d.lines.some(l=>Number(l.received)>0);
   $("#poSheet").innerHTML=poSheetHTML(j);
+  const x=isXfer(d.no), mine=isAdmin()||(isDO(d.no)&&srcOf(d)===myCode());   /* ฝ่ายผลิตแก้/ยกเลิกใบส่งของของฝ่ายตัวเองได้ */
   $("#poActions").innerHTML=`<button type="button" class="btn primary" data-print>พิมพ์ / บันทึก PDF</button>`+
     (canReceive(d)?`<a class="btn" href="${rcHref(d.no)}">รับของ</a>`:"")+
-    (isAdmin()&&d.status!=="ยกเลิก"?`<button type="button" class="btn" data-poedit>แก้ไข${isTR(d.no)?"ใบเบิก":" PO"}</button>`:"")+
-    (isAdmin()&&d.status!=="ยกเลิก"&&!received?`<button type="button" class="btn danger" data-pocancel="${esc(d.no)}">${isTR(d.no)?"ยกเลิกใบเบิก (คืนของเข้าสต็อกกลาง)":"ยกเลิก PO"}</button>`:"");
-  document.title=`${d.no} · ${isTR(d.no)?"ใบเบิกสินค้า":"ใบสั่งซื้อ"}`;
+    (mine&&d.status!=="ยกเลิก"?`<button type="button" class="btn" data-poedit>แก้ไข${x?"ใบส่งของ":" PO"}</button>`:"")+
+    (mine&&d.status!=="ยกเลิก"&&!received?`<button type="button" class="btn danger" data-pocancel="${esc(d.no)}">${x?"ยกเลิกใบส่งของ (คืนของเข้าสต็อก)":"ยกเลิก PO"}</button>`:"");
+  document.title=`${d.no} · ${x?"ใบส่งของ":"ใบสั่งซื้อ"}`;
 }
 
 /* ======================================================================
@@ -2459,8 +2623,8 @@ async function loadReceiveList(){
 function renderRcList(){
   const bf=isAdmin()?$("#rcBranchFilter").value:"";
   const list=rcDocs.filter(d=>!bf||d.branch===bf);
-  $("#rcList").innerHTML=list.length?list.map(d=>`<article class="doc"><div class="dochead"><span class="no">${esc(d.no)}</span>${isTR(d.no)?'<span class="pill p-tr">ใบเบิก</span>':""}<span class="pill ${PO_CLS[d.status]}">${esc(d.status)}</span>
-    <span class="meta">${isTR(d.no)?"จากสต็อกกลาง":`ผู้ขาย ${esc(d.sup)}`} · ${isTR(d.no)?"เบิกเมื่อ":"สั่งเมื่อ"} ${thDate(d.date)}${d.due?` · กำหนดส่ง ${thDate(d.due)}`:""}${isAdmin()?` · ส่งที่ ${esc(d.branchName)}`:""}</span></div>
+  $("#rcList").innerHTML=list.length?list.map(d=>`<article class="doc"><div class="dochead"><span class="no">${esc(d.no)}</span>${isXfer(d.no)?'<span class="pill p-tr">ใบส่งของ</span>':""}<span class="pill ${PO_CLS[d.status]}">${esc(d.status)}</span>
+    <span class="meta">${isXfer(d.no)?`จาก ${esc(unitName(srcOf(d)))}`:`ผู้ขาย ${esc(d.sup)}`} · ${isXfer(d.no)?"ส่งเมื่อ":"สั่งเมื่อ"} ${thDate(d.date)}${d.due?` · กำหนดส่ง ${thDate(d.due)}`:""}${isAdmin()?` · ส่งที่ ${esc(d.branchName)}`:""}</span></div>
     <p class="meta-line">${esc(live(d).map(l=>`${l.item} ${fmt(l.qty)} ${l.unit}`).slice(0,3).join(", "))}${live(d).length>3?` และอีก ${live(d).length-3} รายการ`:""} · ${progress(d)}</p>
     <div class="docactions"><a class="btn primary" href="${rcHref(d.no)}">รับของ</a><a class="btn ghost small" href="${poHref(d.no)}">ดูใบสั่งซื้อ</a></div></article>`).join(""):
     `<div class="empty-card">ไม่มีใบสั่งซื้อที่รอรับของ${isBranch()?` ของสาขา ${esc(me.branch.name)}`:""}</div>`;
@@ -2485,7 +2649,7 @@ function renderReceive(){
   }
   $("#rcForm").innerHTML=`
   <div class="doc"><div class="dochead"><span class="no">${esc(d.no)}</span><span class="pill ${PO_CLS[d.status]}">${esc(d.status)}</span>
-    <span class="meta">${isTR(d.no)?"ใบเบิกจาก <b>สต็อกกลาง</b>":`ผู้ขาย <b>${esc(d.sup)}</b>`} · ${isTR(d.no)?"เบิกเมื่อ":"สั่งเมื่อ"} ${thDate(d.date)}${d.due?` · กำหนดส่ง ${thDate(d.due)}`:""} · ส่งที่ ${esc(d.branchName)}</span></div></div>
+    <span class="meta">${isXfer(d.no)?`ใบส่งของจาก <b>${esc(unitName(srcOf(d)))}</b>`:`ผู้ขาย <b>${esc(d.sup)}</b>`} · ${isXfer(d.no)?"ส่งเมื่อ":"สั่งเมื่อ"} ${thDate(d.date)}${d.due?` · กำหนดส่ง ${thDate(d.due)}`:""} · ส่งที่ ${esc(d.branchName)}</span></div></div>
   <div class="rcitems">${live(d).map(l=>{ const rem=Math.max(0,Number(l.qty)-Number(l.received)), done=rem<=0;
     return `<div class="rcline${done?" done":""}" data-line="${l.line}">
       <div><div class="nm">${esc(l.item)}</div><div class="nums">สั่ง <b>${fmt(l.qty)}</b> ${esc(l.unit)} · รับแล้ว <b>${fmt(l.received)}</b>${done?" · ครบแล้ว":` · ยังขาด <b>${fmt(rem)}</b>`}</div></div>
@@ -2545,7 +2709,7 @@ async function saveReceive(btn){
   const warns=[];
   const over=got.filter(g=>{ const l=rc.doc.lines.find(x=>x.line===g.line); return l&&num(g.qty).v>Math.max(0,Number(l.qty)-Number(l.received)); });
   if(over.length) warns.push("รับเกินจำนวนที่สั่ง: "+over.map(g=>rc.doc.lines.find(x=>x.line===g.line).item).join(", "));
-  if(!rc.photo&&!isTR(rc.doc.no)) warns.push("ยังไม่ได้ถ่ายรูปใบส่งของ");
+  if(!rc.photo&&!isXfer(rc.doc.no)) warns.push("ยังไม่ได้ถ่ายรูปใบส่งของ");
   if(warns.length&&!armed(btn,"ยืนยัน บันทึกการรับของ")){ say("#rcMsg",warns.join(" · ")+" · ตรวจอีกครั้ง หรือกดปุ่มอีกครั้งเพื่อยืนยัน","warn"); return; }
   rcBusy=true; btn.disabled=true; say("#rcMsg",rc.photo?"กำลังส่งรูปและบันทึกการรับของ…":"กำลังบันทึกการรับของ…");
   const by=$("#rcBy").value.trim();
