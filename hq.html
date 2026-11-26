@@ -382,7 +382,6 @@ tr.item.deleted .cell:disabled{text-decoration:line-through;opacity:1}
 }
 
 /* pr.html: only the purchase request part, for branches (mostly on phones) */
-.pr-only .tabs{display:none}
 .pr-only .nav .wrap{min-height:46px}
 .pr-only #page-pr .pagehead h2{display:none}
 .pr-only #prSub{font-size:17px;font-weight:600;color:var(--ink);margin:0}
@@ -873,8 +872,8 @@ const ROWKEYS=["cat","kind","code","item","unit","sup","type"];
 const LABEL={kind:"ชนิดสินค้า",code:"รหัสเลขที่",item:"รายละเอียดสินค้า",unit:"หน่วยนับ",sup:"ผู้ส่งสินค้า",type:"ประเภทสินค้า"};
 const REFRESH_MS=5*60*1000;
 /* pr.html shows only the PR part; hq.html is the central warehouse page (สต็อกกลาง) */
-const ONLY=Array.isArray(window.APP_PAGES)?window.APP_PAGES:(window.PR_ONLY?["pr"]:null);
-const PR_ONLY=!!ONLY&&ONLY.length===1&&ONLY[0]==="pr";
+const PR_ONLY=!!window.PR_ONLY;            /* pr.html: the branch page (purchase requests + receiving) */
+const ONLY=Array.isArray(window.APP_PAGES)?window.APP_PAGES:(PR_ONLY?["pr","receive"]:null);
 const HQ_ONLY=!!window.HQ_ONLY;
 const HQ_CODE="HQ";
 const TH_MONTHS=["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
@@ -970,7 +969,7 @@ async function call(action,data){
 let afterLogin=null;
 function askLogin(hint,then){
   afterLogin=then||null;
-  $("#loginHint").textContent=hint||(PR_ONLY?"ใส่รหัสของสาขา เพื่อเปิดใบขอซื้อและดูสถานะใบที่เปิดไว้":HQ_ONLY?"ใส่รหัสของส่วนกลาง (HQ) หรือรหัสฝ่ายจัดซื้อ":"ใส่รหัสของสาขา หรือรหัสฝ่ายจัดซื้อ · คนที่ไม่มีรหัสดูตารางสต็อกได้อย่างเดียว");
+  $("#loginHint").textContent=hint||(PR_ONLY?"ใส่รหัสของสาขา เพื่อเปิดใบขอซื้อ ดูสถานะ และรับของ":HQ_ONLY?"ใส่รหัสของส่วนกลาง (HQ) หรือรหัสฝ่ายจัดซื้อ":"ใส่รหัสของสาขา หรือรหัสฝ่ายจัดซื้อ · คนที่ไม่มีรหัสดูตารางสต็อกได้อย่างเดียว");
   $("#loginPanel").hidden=false; $("#loginMsg").textContent=""; $("#pwInput").value="";
   window.scrollTo({top:0}); $("#pwInput").focus();
 }
@@ -1027,7 +1026,7 @@ async function restoreSession(){
 async function updateBadges(){
   const pr=$("#bdgPR"), rc=$("#bdgRC"), ct=$("#bdgCT");
   const pw=$("#bdgPRW");
-  if(!me||legacy||PR_ONLY){ pr.hidden=rc.hidden=ct.hidden=pw.hidden=true; return; }
+  if(!me||legacy){ pr.hidden=rc.hidden=ct.hidden=pw.hidden=true; return; }
   let open=null;
   if(isAdmin()){
     const j=await call("pr_list",{status:"wait"});
@@ -1040,7 +1039,7 @@ async function updateBadges(){
     const n=open.filter(d=>d.branch===myCode()).length; rc.textContent=n; rc.hidden=!n; rc.title=n?`PO รอรับของ ${n} ใบ`:"";
     pr.hidden=true;
   }
-  if(canCentral()&&apiRev>=6){
+  if(canCentral()&&apiRev>=6&&(!ONLY||ONLY.includes("central"))){
     if(!open){ const j=await call("po_list",{open:true}); open=j.ok?j.docs:[]; }
     const n=open.filter(d=>isTR(d.no)&&d.status==="รอส่งของ").length; ct.textContent=n; ct.hidden=!n; ct.title=n?`ใบเบิกรอส่ง ${n} ใบ`:"";
   }else ct.hidden=true;
@@ -2251,7 +2250,7 @@ $("#page-po").addEventListener("click",async e=>{
     else { c.disabled=false; say("#poViewMsg",errText(j),"warn"); }
   }
 });
-const poLink=no=>location.origin+location.pathname.replace(/[^/]*$/,"")+"?po="+encodeURIComponent(no);   /* QR always opens the main page */
+const poLink=no=>location.origin+location.pathname.replace(/[^/]*$/,"")+"pr.html?po="+encodeURIComponent(no);   /* QR opens the branch page (ขอซื้อและรับของ) */
 
 /* ---------- แก้ไขใบสั่งซื้อ / ใบเบิก (ฝ่ายจัดซื้อ) ---------- */
 let poEd=null;
@@ -2432,11 +2431,14 @@ async function showPO(no,quiet){
    ====================================================================== */
 let rcDocs=[], rc=null, rcBusy=false;
 async function enterReceive(arg){
-  const gate=!me||legacy;
-  $("#rcGate").hidden=!gate||legacy;
+  const gate=!me||legacy, starting=!booted;   /* wait for a remembered sign-in before asking */
+  $("#rcGate").hidden=!gate||legacy||starting;
   $("#rcGateText").textContent=arg?`ได้รับของตามใบสั่งซื้อ ${arg} · เข้าสู่ระบบด้วยรหัสของสาขาเพื่อบันทึกการรับของ`:"เข้าสู่ระบบด้วยรหัสของสาขา เพื่อบันทึกการรับของ";
   $("#rcListWrap").hidden=gate||!!arg; $("#rcForm").hidden=gate||!arg;
-  if(gate){ if(arg&&!legacy) askLogin(`ได้รับของตามใบสั่งซื้อ ${arg} · ใส่รหัสของสาขาเพื่อบันทึกการรับของ`); return; }
+  if(gate){
+    if(!starting&&!legacy&&(arg||PR_ONLY)&&$("#loginPanel").hidden) askLogin(arg?`ได้รับของตามใบสั่งซื้อ ${arg} · ใส่รหัสของสาขาเพื่อบันทึกการรับของ`:undefined);
+    return;
+  }
   $("#rcSub").textContent=arg?"ตรวจของที่ได้รับ ใส่จำนวนที่ได้จริง แล้วถ่ายรูปใบส่งของ":`สแกน QR บนใบสั่งซื้อที่มากับของ หรือเลือก PO ที่รอรับของ${isBranch()?`ของสาขา ${me.branch.name}`:""}`;
   if(arg) await openReceive(arg); else await loadReceiveList();
 }
@@ -2550,7 +2552,7 @@ async function saveReceive(btn){
   $("#rcForm").innerHTML=`<div class="rcok"><h3>บันทึกการรับของแล้ว · ${esc(j.no)}</h3>
     <p>${esc(d.no)} จาก ${esc(d.sup)} ส่งที่ ${esc(d.branchName)} · เพิ่มเข้าสต็อกของสาขาแล้ว${j.photo?` · <a href="${esc(j.photo)}" target="_blank" rel="noopener">ดูรูปใบส่งของ</a>`:""}</p>
     <ul>${gotLines}</ul>${j.notInStock&&j.notInStock.length?`<p class="msgline warn">ไม่พบในตารางสต็อก จึงไม่ได้บวกยอด: ${esc(j.notInStock.join(", "))}</p>`:""}
-    <div class="docactions"><a class="btn primary" href="#history">ดูประวัติรับของ</a><a class="btn" href="#receive">PO อื่นที่รอรับของ</a><a class="btn ghost" href="#stock">ดูสต็อก</a></div></div>`;
+    <div class="docactions">${PR_ONLY?'<a class="btn primary" href="#receive">PO อื่นที่รอรับของ</a><a class="btn" href="#pr">ไปหน้าขอซื้อ</a>':'<a class="btn primary" href="#history">ดูประวัติรับของ</a><a class="btn" href="#receive">PO อื่นที่รอรับของ</a><a class="btn ghost" href="#stock">ดูสต็อก</a>'}</div></div>`;
   rc=null; updateBadges(); load();
 }
 
@@ -2602,6 +2604,8 @@ $("#hQ").addEventListener("input",renderHistory);
 (async function init(){
   if(PR_ONLY){
     /* the PR list does not need the item list, so sign in and show it while the items load */
+    const qpo=new URLSearchParams(location.search).get("po");
+    if(qpo) history.replaceState(null,"",location.pathname+"#receive/"+encodeURIComponent(qpo));
     updateWho(); route();
     const loading=load();
     await restoreSession();
@@ -2620,14 +2624,14 @@ $("#hQ").addEventListener("input",renderHistory);
 })();
 /* pr.html: refresh the statuses quietly when the page comes back into view */
 function refreshPRQuiet(){
-  if(!PR_ONLY||!me||legacy||prBusy||document.visibilityState!=="visible") return;
+  if(!PR_ONLY||!me||legacy||prBusy||currentPage!=="pr"||document.visibilityState!=="visible") return;
   if(Object.keys(decideState).length||Date.now()-prLoadedAt<30000) return;
   loadPR(true);
 }
 document.addEventListener("visibilitychange",refreshPRQuiet);
 setInterval(()=>{
   if(document.visibilityState!=="visible") return;
-  if(PR_ONLY){ refreshPRQuiet(); return; }
+  if(PR_ONLY){ refreshPRQuiet(); updateBadges(); return; }   /* keeps the receive-tab count fresh */
   if(!editing&&!saving&&(API_URL||CSV_URL)&&currentPage==="stock") load();
   if(currentPage==="central"&&me&&!ctEdit&&!ctBusy) load().then(()=>loadCentral(true));
   updateBadges();
