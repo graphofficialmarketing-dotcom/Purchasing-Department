@@ -587,6 +587,11 @@ tr.item.deleted .cell:disabled{text-decoration:line-through;opacity:1}
   .mvrow.out .kph{background:var(--low-bg);color:var(--low)}
   .f-user,#loginForm .f-pw{flex:1 1 100%}
 }
+/* inout.html: หน้าเบิกเข้า-ออกแยก (หัวหน้าเว็บบอกชื่อหน้าแล้ว) */
+.mv-only .nav .wrap{min-height:46px}
+.mv-only #page-moves .pagehead h2{display:none}
+.mv-only #page-moves .pagehead{align-items:center}
+.mv-only #page-moves .pagehead .sub{margin-top:0}
 </style>
 </head>
 <body class="pr-only">
@@ -862,7 +867,7 @@ tr.item.deleted .cell:disabled{text-decoration:line-through;opacity:1}
 </main>
 
 <script>
-window.PR_ONLY=true; window.APP_PAGES=["pr","receive","moves"]; /* หน้าของสาขา: เปิดใบขอซื้อ และรับของ */
+window.PR_ONLY=true; window.APP_PAGES=["pr","receive"]; /* หน้าของสาขา: เปิดใบขอซื้อ และรับของ */
 /* Minimal QR Code generator: byte mode, error correction level M, versions 1–10.
    Follows the structure of Project Nayuki's QR Code generator (MIT). makeQR(text) → {size, dark(x,y)}; qrSVG(text, px) → <svg>. */
 const QR=(()=>{
@@ -1018,6 +1023,7 @@ const REFRESH_MS=5*60*1000;
 const PR_ONLY=!!window.PR_ONLY;            /* pr.html: the branch page (purchase requests + receiving) */
 const ONLY=Array.isArray(window.APP_PAGES)?window.APP_PAGES:(PR_ONLY?["pr","receive"]:null);
 const HQ_ONLY=!!window.HQ_ONLY;
+const MV_ONLY=!!window.MV_ONLY;            /* inout.html: stock in/out (เบิกเข้า-ออก) only */
 const HQ_CODE="HQ";
 const TH_MONTHS=["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
 const TH_MONTHS_LONG=["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
@@ -1094,6 +1100,7 @@ const hasPR=()=>!ONLY||ONLY.includes("pr");                 /* the main page sen
 const prHref=()=>hasPR()?"#pr":"pr.html";
 const hasRC=()=>!ONLY||ONLY.includes("receive");            /* ...and receiving too */
 const rcHref=no=>(hasRC()?"":"pr.html")+"#receive"+(no?"/"+encodeURIComponent(no):"");
+const hasMV=()=>!ONLY||ONLY.includes("moves");               /* เบิกเข้า-ออก has its own page: inout.html */
 const branchName=code=>{ const b=(branchList.length?branchList:(me&&me.branches)||[]).find(x=>x.code===code); return b?b.name:code; };
 const allBranches=()=>branchList.length?branchList:((me&&me.branches)||[]);
 
@@ -1127,7 +1134,7 @@ async function call(action,data){
 let afterLogin=null;
 function askLogin(hint,then){
   afterLogin=then||null;
-  $("#loginHint").textContent=(hint||(PR_ONLY?"ใส่ชื่อผู้ใช้และรหัสผ่านของคุณ เพื่อเปิดใบขอซื้อ รับของ และเบิกเข้า-ออก":HQ_ONLY?"ใส่ชื่อผู้ใช้และรหัสผ่าน ของคลังกลาง (HQ) ฝ่ายผลิต หรือฝ่ายจัดซื้อ":"ใส่ชื่อผู้ใช้และรหัสผ่านของคุณ · คนที่ไม่มีรหัสดูตารางสต็อกได้อย่างเดียว"))+
+  $("#loginHint").textContent=(hint||(PR_ONLY?"ใส่ชื่อผู้ใช้และรหัสผ่านของคุณ เพื่อเปิดใบขอซื้อและรับของ":MV_ONLY?"ใส่ชื่อผู้ใช้และรหัสผ่านของคุณ เพื่อบันทึกและดูการเบิกเข้า-ออก":HQ_ONLY?"ใส่ชื่อผู้ใช้และรหัสผ่าน ของคลังกลาง (HQ) ฝ่ายผลิต หรือฝ่ายจัดซื้อ":"ใส่ชื่อผู้ใช้และรหัสผ่านของคุณ · คนที่ไม่มีรหัสดูตารางสต็อกได้อย่างเดียว"))+
     " · ยังไม่มีชื่อผู้ใช้: เว้นช่องชื่อผู้ใช้ว่าง แล้วใส่รหัสแบบเดิม";
   $("#loginPanel").hidden=false; $("#loginMsg").textContent=""; $("#pwInput").value="";
   if(!$("#userInput").value) $("#userInput").value=store.raw(USER_KEY);
@@ -1139,8 +1146,8 @@ function updateWho(){
   $("#ctTab").textContent=isDeptUser()?"สต็อกของฝ่าย":"สต็อกกลาง";
   $("#prTab").textContent=isDeptUser()&&apiRev>=9?"คำขอจากสาขา":"ขอซื้อ (PR)";
   $("#btnLogin").hidden=!!me; $("#btnLogout").hidden=!me;
-  document.querySelectorAll(".tabs a").forEach(a=>{ const pg=a.dataset.page; a.hidden=(ONLY&&!ONLY.includes(pg))||(pg==="central"&&!HQ_ONLY&&!canCentral()); });
-  $("#lnkPR").hidden=!me||hasPR();
+  document.querySelectorAll(".tabs a").forEach(a=>{ const pg=a.dataset.page; a.hidden=MV_ONLY||(ONLY&&!ONLY.includes(pg))||(pg==="central"&&!HQ_ONLY&&!canCentral()); });
+  $("#lnkPR").hidden=!me||hasPR()||MV_ONLY;
   $("#lnkPRText").textContent=isAdmin()?"อนุมัติใบขอซื้อ":"ขอซื้อ · รับของ";
 }
 function onAuthChanged(){
@@ -1189,7 +1196,7 @@ async function restoreSession(){
 async function updateBadges(){
   const pr=$("#bdgPR"), rc=$("#bdgRC"), ct=$("#bdgCT");
   const pw=$("#bdgPRW");
-  if(!me||legacy){ pr.hidden=rc.hidden=ct.hidden=pw.hidden=true; return; }
+  if(!me||legacy||MV_ONLY){ pr.hidden=rc.hidden=ct.hidden=pw.hidden=true; return; }   /* inout.html shows no counts */
   let open=null;
   if(isAdmin()){
     const j=await call("pr_list",apiRev>=9?{status:"wait",box:"in"}:{status:"wait"});
@@ -1225,6 +1232,7 @@ function route(){
   const i=h.indexOf("/"), page=(i<0?h:h.slice(0,i))||"stock", arg=i<0?"":h.slice(i+1);
   if(page==="pr"&&!hasPR()){ location.replace("pr.html"); return; }
   if(page==="receive"&&!hasRC()){ location.replace(rcHref(arg)); return; }
+  if(page==="moves"&&!hasMV()){ location.replace("inout.html"); return; }
   const p=ONLY?(ONLY.includes(page)?page:ONLY[0]):(PAGES[page]?page:"stock");
   currentPage=p;
   document.querySelectorAll(".page").forEach(el=>{ el.hidden=el.id!=="page-"+p; });
@@ -1300,7 +1308,7 @@ function setItems(rows,ver,src){
   version=ver||null; source=src;
 }
 function useApi(j){
-  legacy=j.schema!==2; apiRev=Number(j.rev)||0;
+  legacy=j.schema!==2; if(j.rev!==undefined||!items) apiRev=Number(j.rev)||0;   /* replies to saves carry no rev: keep the one from the last load */
   if(Array.isArray(j.branches)) branchList=j.branches;
   if(Array.isArray(j.stockCodes)) stockCodes=j.stockCodes;
   setDepts(j.depts);
@@ -1496,7 +1504,7 @@ function fillLists(list){
   fill("dl-unit","unit"); fill("dl-sup","sup"); fill("dl-kind","kind");
 }
 function render(){
-  if(PR_ONLY) return;                    /* pr.html has no stock table */
+  if(PR_ONLY||MV_ONLY) return;           /* pr.html and inout.html have no stock table */
   const admin=isAdmin();
   document.body.classList.toggle("editing",editing);
   $("#thAct").hidden=!(editing&&admin);
@@ -1832,7 +1840,7 @@ function remapDraft(){
   return lost;
 }
 function maybeRestore(){
-  if(PR_ONLY||editing||!me||!canEditTable()) return;
+  if(PR_ONLY||MV_ONLY||editing||!me||!canEditTable()) return;
   const d=store.get(DRAFT_KEY);
   if(!d||typeof d!=="object"||d.owner!==ownerKey()) return;
   draft={e:d.e&&typeof d.e==="object"?d.e:{},a:Array.isArray(d.a)?d.a:[],d:Array.isArray(d.d)?d.d:[]};
@@ -2972,8 +2980,12 @@ async function enterMoves(){
   $("#mvGate").hidden=!gate||legacy||starting; $("#mvBar").hidden=gate; $("#mvBtns").hidden=gate||apiRev<12;
   if(gate){
     $("#mvList").innerHTML=""; $("#mvForm").hidden=true; $("#mvSub").textContent="";
-    if(PR_ONLY&&!starting&&!legacy&&$("#loginPanel").hidden) askLogin();
+    say("#mvListMsg",starting?"กำลังโหลด…":"");
+    if(MV_ONLY&&!starting&&!legacy&&$("#loginPanel").hidden) askLogin();
     return;
+  }
+  if(!apiRev&&(!booted||!items)){   /* signed in before the item list arrived (the start-up calls this again), or it did not load */
+    $("#mvList").innerHTML=""; say("#mvListMsg",booted?"โหลดข้อมูลไม่สำเร็จ ลองรีเฟรชหน้านี้อีกครั้ง":"กำลังโหลด…",booted?"warn":""); return;
   }
   if(apiRev<12){ $("#mvList").innerHTML=""; say("#mvListMsg","ต้องอัปเดตโค้ด Apps Script ก่อน จึงจะบันทึกและดูการเบิกเข้า-ออกได้","warn"); return; }
   const sel=$("#mvBranch");
@@ -3126,6 +3138,12 @@ $("#mvQList").addEventListener("input",renderMoves);
     if(legacy){ $("#loginPanel").hidden=true; route(); }   /* old Apps Script: explain instead of asking for a code */
     return;
   }
+  if(MV_ONLY){
+    updateWho(); route();
+    await Promise.all([load(),restoreSession()]);
+    booted=true; route();
+    return;
+  }
   const po=new URLSearchParams(location.search).get("po");
   if(po&&!hasRC()){ location.replace("pr.html?po="+encodeURIComponent(po)); return; }   /* QR on POs printed before receiving moved to pr.html */
   if(po) history.replaceState(null,"",location.pathname+"#receive/"+encodeURIComponent(po));
@@ -3145,6 +3163,7 @@ document.addEventListener("visibilitychange",refreshPRQuiet);
 setInterval(()=>{
   if(document.visibilityState!=="visible") return;
   if(PR_ONLY){ refreshPRQuiet(); updateBadges(); return; }   /* keeps the receive-tab count fresh */
+  if(MV_ONLY){ if(me&&!legacy&&!mvForm&&!mvBusy&&currentPage==="moves") load().then(()=>loadMoves(true)); return; }
   if(!editing&&!saving&&(API_URL||CSV_URL)&&currentPage==="stock") load();
   if(currentPage==="central"&&me&&!ctEdit&&!ctBusy) load().then(()=>loadCentral(true));
   updateBadges();
