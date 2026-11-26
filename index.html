@@ -482,6 +482,10 @@ tr.item.deleted .cell:disabled{text-decoration:line-through;opacity:1}
 .poedit h3{margin:0}
 .poedit .lines td.chk{text-align:center}
 .poedit .lines tfoot td:last-child{width:1%}
+
+/* nav links for purchasing: main page → PR approvals (pr.html), pr.html → main page */
+.who .navlink{text-decoration:none;display:inline-flex;gap:6px;align-items:center;white-space:nowrap}
+@media (max-width:560px){ .who:has(.navlink:not([hidden])) #whoLabel{display:none} }
 </style>
 </head>
 <body>
@@ -509,6 +513,8 @@ tr.item.deleted .cell:disabled{text-decoration:line-through;opacity:1}
       <a href="#history" data-page="history">ประวัติรับของ</a>
     </div>
     <div class="who">
+      <a class="btn navlink" id="lnkPR" href="pr.html" hidden>อนุมัติใบขอซื้อ <span class="badge" id="bdgPRW" hidden></span></a>
+      <a class="btn navlink" id="lnkMain" href="./" hidden>หน้าหลัก</a>
       <span id="whoLabel"></span>
       <button type="button" id="btnLogin" class="btn">เข้าสู่ระบบ</button>
       <button type="button" id="btnLogout" class="btn" hidden>ออกจากระบบ</button>
@@ -713,6 +719,7 @@ tr.item.deleted .cell:disabled{text-decoration:line-through;opacity:1}
 </main>
 
 <script>
+window.APP_PAGES=["stock","central","po","receive","history"]; /* ขอซื้ออยู่ที่ pr.html */
 /* Minimal QR Code generator: byte mode, error correction level M, versions 1–10.
    Follows the structure of Project Nayuki's QR Code generator (MIT). makeQR(text) → {size, dark(x,y)}; qrSVG(text, px) → <svg>. */
 const QR=(()=>{
@@ -926,6 +933,8 @@ const myCode=()=>isBranch()?me.branch.code:"";
 const isHQ=()=>isBranch()&&myCode()===HQ_CODE;
 const canCentral=()=>isAdmin()||isHQ();
 const isTR=no=>String(no||"").startsWith("TR-");
+const hasPR=()=>!ONLY||ONLY.includes("pr");                 /* the main page sends PRs to pr.html */
+const prHref=()=>hasPR()?"#pr":"pr.html";
 const branchName=code=>{ const b=(branchList.length?branchList:(me&&me.branches)||[]).find(x=>x.code===code); return b?b.name:code; };
 const allBranches=()=>branchList.length?branchList:((me&&me.branches)||[]);
 
@@ -967,6 +976,8 @@ function updateWho(){
   $("#whoLabel").innerHTML=me?`<b>${esc(isAdmin()?"ฝ่ายจัดซื้อ":isHQ()?"ส่วนกลาง (คลังกลาง)":"สาขา "+me.branch.name)}</b>`:"";
   $("#btnLogin").hidden=!!me; $("#btnLogout").hidden=!me;
   document.querySelectorAll(".tabs a").forEach(a=>{ const pg=a.dataset.page; a.hidden=(ONLY&&!ONLY.includes(pg))||(pg==="central"&&!HQ_ONLY&&!canCentral()); });
+  $("#lnkPR").hidden=!isAdmin()||hasPR();
+  $("#lnkMain").hidden=!isAdmin()||!PR_ONLY;
 }
 function onAuthChanged(){
   updateWho();
@@ -1013,11 +1024,13 @@ async function restoreSession(){
 }
 async function updateBadges(){
   const pr=$("#bdgPR"), rc=$("#bdgRC"), ct=$("#bdgCT");
-  if(!me||legacy||PR_ONLY){ pr.hidden=rc.hidden=ct.hidden=true; return; }
+  const pw=$("#bdgPRW");
+  if(!me||legacy||PR_ONLY){ pr.hidden=rc.hidden=ct.hidden=pw.hidden=true; return; }
   let open=null;
   if(isAdmin()){
     const j=await call("pr_list",{status:"wait"});
     const n=j.ok?j.docs.length:0; pr.textContent=n; pr.hidden=!n; pr.title=n?`รออนุมัติ ${n} ใบ`:"";
+    pw.textContent=n; pw.hidden=!n; pw.title=pr.title;
     rc.hidden=true;
   }else{
     const j=await call("po_list",{open:true});
@@ -1038,6 +1051,7 @@ function route(){
   try{ h=decodeURIComponent(h); }catch(e){}
   document.title=TITLE;
   const i=h.indexOf("/"), page=(i<0?h:h.slice(0,i))||"stock", arg=i<0?"":h.slice(i+1);
+  if(page==="pr"&&!hasPR()){ location.replace("pr.html"); return; }
   const p=ONLY?(ONLY.includes(page)?page:ONLY[0]):(PAGES[page]?page:"stock");
   currentPage=p;
   document.querySelectorAll(".page").forEach(el=>{ el.hidden=el.id!=="page-"+p; });
@@ -1753,7 +1767,7 @@ function ctPendingHTML(hit){
       <span class="meta">ขอรวม <b>${fmt(r.p.qty)}</b> ${esc(r.it.unit)} · สต็อกกลางมี <b>${r.v===null?"ยังไม่นับ":fmt(r.v)}</b></span>
       <span class="right">${r.left===null?'<span class="pill p-none">ยังไม่นับ</span>':r.left>=0?`<span class="pill p-ok">พอ · เหลือ ${fmt(r.left)}</span>`:`<span class="pill p-out">ขาด ${fmt(-r.left)}</span>`}</span></div>
     <p class="meta-line">${r.p.prs.map(x=>`${esc(x.branch)} ${fmt(x.qty)} (${esc(x.no)})`).join(" · ")}</p></article>`).join("")+
-    (isAdmin()?`<p class="msgline">อนุมัติและเลือกจ่ายจากสต็อกกลางได้ที่หน้า <a href="${ONLY&&!ONLY.includes("pr")?"./":""}#pr">ขอซื้อ (PR)</a></p>`:"");
+    (isAdmin()?`<p class="msgline">อนุมัติและเลือกจ่ายจากสต็อกกลางได้ที่หน้า <a href="${prHref()}">อนุมัติใบขอซื้อ</a></p>`:"");
 }
 function ctMovesHTML(hit){
   const moves=((ctData&&ctData.moves)||[]).filter(m=>(ctSub==="all"||m.kind===ctSub)&&hit(m.item,m.doc,m.ref,m.who));
@@ -2591,6 +2605,7 @@ $("#hQ").addEventListener("input",renderHistory);
     await restoreSession();
     booted=true; route();
     await loading;
+    if(legacy){ $("#loginPanel").hidden=true; route(); }   /* old Apps Script: explain instead of asking for a code */
     return;
   }
   const po=new URLSearchParams(location.search).get("po");
