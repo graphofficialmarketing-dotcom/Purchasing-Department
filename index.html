@@ -865,7 +865,7 @@ tr.item.deleted .cell:disabled{text-decoration:line-through;opacity:1}
 </main>
 
 <script>
-window.APP_PAGES=["stock","central","po","history"]; /* ขอซื้อและรับของอยู่ที่ pr.html · เบิกเข้า-ออกอยู่ที่ inout.html */
+window.APP_PAGES=["stock","central","po","history"]; window.APP_LINKS=["pr","moves"]; /* แท็บ ใบขอซื้อ เปิด pr.html · แท็บ เบิกเข้า-ออก เปิด inout.html */
 /* Minimal QR Code generator: byte mode, error correction level M, versions 1–10.
    Follows the structure of Project Nayuki's QR Code generator (MIT). makeQR(text) → {size, dark(x,y)}; qrSVG(text, px) → <svg>. */
 const QR=(()=>{
@@ -1022,6 +1022,8 @@ const PR_ONLY=!!window.PR_ONLY;            /* pr.html: the branch page (purchase
 const ONLY=Array.isArray(window.APP_PAGES)?window.APP_PAGES:(PR_ONLY?["pr","receive"]:null);
 const HQ_ONLY=!!window.HQ_ONLY;
 const MV_ONLY=!!window.MV_ONLY;            /* inout.html: stock in/out (เบิกเข้า-ออก) only */
+const LINKS=Array.isArray(window.APP_LINKS)?window.APP_LINKS:[];   /* tabs that open another page: pr → pr.html, moves → inout.html */
+const LINK_HREF={pr:"pr.html",moves:"inout.html"};
 const HQ_CODE="HQ";
 const TH_MONTHS=["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
 const TH_MONTHS_LONG=["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
@@ -1142,10 +1144,10 @@ const unitText=()=>!me?"":isAdmin()?"ฝ่ายจัดซื้อ":isHQ()?"
 function updateWho(){
   $("#whoLabel").innerHTML=!me?"":me.user?`<b>${esc(me.user.name)}</b> <span class="wunit">· ${esc(unitText())}</span>`:`<b>${esc(unitText())}</b>`;
   $("#ctTab").textContent=isDeptUser()?"สต็อกของฝ่าย":"สต็อกกลาง";
-  $("#prTab").textContent=isDeptUser()&&apiRev>=9?"คำขอจากสาขา":"ขอซื้อ (PR)";
+  $("#prTab").textContent=!hasPR()?"ใบขอซื้อ":isDeptUser()&&apiRev>=9?"คำขอจากสาขา":"ขอซื้อ (PR)";
   $("#btnLogin").hidden=!!me; $("#btnLogout").hidden=!me;
-  document.querySelectorAll(".tabs a").forEach(a=>{ const pg=a.dataset.page; a.hidden=MV_ONLY||(ONLY&&!ONLY.includes(pg))||(pg==="central"&&!HQ_ONLY&&!canCentral()); });
-  $("#lnkPR").hidden=!me||hasPR()||MV_ONLY;
+  document.querySelectorAll(".tabs a").forEach(a=>{ const pg=a.dataset.page; a.hidden=MV_ONLY||(ONLY&&!ONLY.includes(pg)&&!LINKS.includes(pg))||(pg==="central"&&!HQ_ONLY&&!canCentral()); });
+  $("#lnkPR").hidden=!me||hasPR()||MV_ONLY||LINKS.includes("pr");   /* the main page has a ใบขอซื้อ tab instead */
   $("#lnkPRText").textContent=isAdmin()?"อนุมัติใบขอซื้อ":"ขอซื้อ · รับของ";
 }
 function onAuthChanged(){
@@ -1194,7 +1196,8 @@ async function restoreSession(){
 async function updateBadges(){
   const pr=$("#bdgPR"), rc=$("#bdgRC"), ct=$("#bdgCT");
   const pw=$("#bdgPRW");
-  if(!me||legacy||MV_ONLY){ pr.hidden=rc.hidden=ct.hidden=pw.hidden=true; return; }   /* inout.html shows no counts */
+  const prLink=LINKS.includes("pr")?document.querySelector('.tabs a[data-page="pr"]'):null;
+  if(!me||legacy||MV_ONLY){ pr.hidden=rc.hidden=ct.hidden=pw.hidden=true; if(prLink) prLink.setAttribute("href","pr.html"); return; }   /* inout.html shows no counts */
   let open=null;
   if(isAdmin()){
     const j=await call("pr_list",apiRev>=9?{status:"wait",box:"in"}:{status:"wait"});
@@ -1209,6 +1212,7 @@ async function updateBadges(){
     pw.textContent=n; pw.hidden=!n; pw.title=rc.title;               /* main page: the count rides on the ขอซื้อ · รับของ link */
     $("#lnkPR").setAttribute("href",n?"pr.html#receive":"pr.html");
     pr.hidden=true;
+    if(prLink){ pr.textContent=n; pr.hidden=!n; pr.title=rc.title; prLink.setAttribute("href",n?"pr.html#receive":"pr.html"); }   /* main page: POs waiting to be received */
     if(isDeptUser()&&apiRev>=9&&hasPR()){   /* ฝ่ายผลิต: คำขอจากสาขาที่รอฝ่ายอนุมัติ */
       const k=await call("pr_list",{status:"wait",box:"in"});
       const m=k.ok?k.docs.length:0; pr.textContent=m; pr.hidden=!m; pr.title=m?`คำขอจากสาขารออนุมัติ ${m} ใบ`:"";
@@ -3123,6 +3127,7 @@ $("#mvCat").addEventListener("change",renderMoves);
 $("#mvQList").addEventListener("input",renderMoves);
 ["mvFrom","mvTo","mvBranch"].forEach(id=>$("#"+id).addEventListener("change",()=>loadMoves()));
 
+LINKS.forEach(pg=>{ const a=document.querySelector(`.tabs a[data-page="${pg}"]`); if(a&&LINK_HREF[pg]) a.setAttribute("href",LINK_HREF[pg]); });
 (async function init(){
   if(PR_ONLY){
     /* the PR list does not need the item list, so sign in and show it while the items load */
